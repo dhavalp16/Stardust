@@ -1,5 +1,10 @@
 // Include the Raylib library header file to access all its functions, such as window creation and 3D drawing.
 #include "raylib.h"
+// Include Raylib's math library for 3D vector math functions.
+#include "raymath.h"
+// Include the standard C++ math library for math operations like square root (std::sqrt).
+#include <cmath>
+
 
 // Define a structure to represent a Planet in our 3D space.
 struct Planet {
@@ -17,10 +22,10 @@ struct Planet {
 
 // The main function where our C++ program begins execution.
 int main() {
-    // Initialize the window with a width of 800 pixels.
-    const int screenWidth = 800;
-    // Initialize the window with a height of 600 pixels.
-    const int screenHeight = 600;
+    // Initialize the window with a width of 1280 pixels.
+    const int screenWidth = 1280;
+    // Initialize the window with a height of 720 pixels.
+    const int screenHeight = 720;
 
     // Call Raylib's InitWindow function to open a window with the specified dimensions and a title "Stardust".
     InitWindow(screenWidth, screenHeight, "Stardust");
@@ -60,8 +65,8 @@ int main() {
     // Assign a float value of 0.073f to the Moon's mass.
     moon.mass = 0.073f;
     // Assign an initial velocity to the Moon. In a 3D vector space, this vector determines how much X, Y, and Z will change each frame.
-    // Setting Z to 0.05f tells the moon to travel across the Z-axis (forward/backward) over time.
-    moon.velocity = Vector3{ 0.0f, 0.0f, 0.05f };
+    // Setting Z to 0.11f gives the moon an initial push forward so it will orbit instead of crashing straight into Earth.
+    moon.velocity = Vector3{ 0.0f, 0.0f, 0.244f };
     // Assign a LIGHTGRAY color to the Moon using Raylib's predefined color constants.
     moon.color = LIGHTGRAY;
 
@@ -70,6 +75,56 @@ int main() {
 
     // Enter a continuous while-loop that will run until the user presses the ESC key or closes the window via the cross button.
     while (!WindowShouldClose()) {
+        // --- GRAVITY CALCULATION ---
+        // 1. Calculate the distance vector (direction) from the Moon to the Earth.
+        // We subtract the Moon's coordinates from the Earth's to get a vector pointing TO the Earth.
+        Vector3 direction = Vector3{
+            earth.position.x - moon.position.x,
+            earth.position.y - moon.position.y,
+            earth.position.z - moon.position.z
+        };
+
+        // 2. Calculate the squared distance (the length squared of the direction vector).
+        // We use the Pythagorean theorem extended to 3D: a^2 + b^2 + c^2 = d^2
+        float distanceSquared = (direction.x * direction.x) + (direction.y * direction.y) + (direction.z * direction.z);
+
+        // We avoid dividing by zero just in case they overlap perfectly.
+        if (distanceSquared > 0.0001f) {
+            // Calculate the actual distance by taking the square root. (Needs <cmath> for std::sqrt)
+            float distance = std::sqrt(distanceSquared);
+
+            // 3. Normalize the direction vector so its length is exactly 1.
+            // By dividing the X/Y/Z vector components by the total length (distance), we get a pure 'direction' without magnitude.
+            Vector3 normalizedDirection = Vector3{
+                direction.x / distance,
+                direction.y / distance,
+                direction.z / distance
+            };
+
+            // 4. Calculate the magnitude of the gravitational pull using Newton's Law of Universal Gravitation: F = G * (m1 * m2) / r^2
+            // We use a predefined gravitational constant (G) tuned for our game scale.
+            float G = 0.05f;
+            // The force increases with mass and decreases with the square of the distance.
+            float force = G * (earth.mass * moon.mass) / distanceSquared;
+
+            // 5. Apply the force as Acceleration to the Moon's Velocity.
+            // From Newton's Second Law (F = ma), Acceleration = Force / Mass. We divide by the Moon's mass.
+            float acceleration = force / moon.mass;
+
+            // 6. Multiply the pure direction vector by the acceleration magnitude.
+            // This spreads the pull across the X, Y, and Z axes appropriately.
+            Vector3 velocityChange = Vector3{
+                normalizedDirection.x * acceleration,
+                normalizedDirection.y * acceleration,
+                normalizedDirection.z * acceleration
+            };
+
+            // 7. Add the calculated velocity change to the Moon's current Velocity vector.
+            moon.velocity.x = moon.velocity.x + velocityChange.x;
+            moon.velocity.y = moon.velocity.y + velocityChange.y;
+            moon.velocity.z = moon.velocity.z + velocityChange.z;
+        }
+
         // --- PHYSICS UPDATE ---
         // Every frame before drawing, update the position of all physics bodies by integrating their velocity over one frame.
         // In linear algebra, Velocity is the rate of change of Position. By adding the components of the Velocity vector
