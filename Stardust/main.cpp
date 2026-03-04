@@ -9,6 +9,8 @@ struct Planet {
     float radius;
     // A single precision floating-point number (4 bytes) representing the mass of the planet (unused for now but ready for physics).
     float mass;
+    // A Vector3 representing the velocity currently experienced by the planet. Contains floats for speed along X, Y, and Z axes.
+    Vector3 velocity;
     // A Raylib Color struct containing four unsigned bytes (r, g, b, a) representing red, green, blue, and alpha channels.
     Color color;
 };
@@ -44,6 +46,8 @@ int main() {
     earth.radius = 2.0f;
     // Assign a float value of 5.97f to Earth's mass. Currently static, but will be used in future gravitational calculations.
     earth.mass = 5.97f;
+    // Initialize Earth's velocity to zero so it remains stationary at the center of the world.
+    earth.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
     // Assign a bright BLUE color to Earth using Raylib's pre-defined color constants.
     earth.color = BLUE;
 
@@ -55,6 +59,9 @@ int main() {
     moon.radius = 0.5f;
     // Assign a float value of 0.073f to the Moon's mass.
     moon.mass = 0.073f;
+    // Assign an initial velocity to the Moon. In a 3D vector space, this vector determines how much X, Y, and Z will change each frame.
+    // Setting Z to 0.05f tells the moon to travel across the Z-axis (forward/backward) over time.
+    moon.velocity = Vector3{ 0.0f, 0.0f, 0.05f };
     // Assign a LIGHTGRAY color to the Moon using Raylib's predefined color constants.
     moon.color = LIGHTGRAY;
 
@@ -63,6 +70,27 @@ int main() {
 
     // Enter a continuous while-loop that will run until the user presses the ESC key or closes the window via the cross button.
     while (!WindowShouldClose()) {
+        // --- PHYSICS UPDATE ---
+        // Every frame before drawing, update the position of all physics bodies by integrating their velocity over one frame.
+        // In linear algebra, Velocity is the rate of change of Position. By adding the components of the Velocity vector
+        // to the components of the Position vector, the object moves through the 3D space.
+
+        // Update Earth's Position (currently zero velocity, so it will not move)
+        // X-axis update: Take the current X position and add the X velocity to it.
+        earth.position.x = earth.position.x + earth.velocity.x;
+        // Y-axis update: Take the current Y position and add the Y velocity to it.
+        earth.position.y = earth.position.y + earth.velocity.y;
+        // Z-axis update: Take the current Z position and add the Z velocity to it.
+        earth.position.z = earth.position.z + earth.velocity.z;
+
+        // Update Moon's Position
+        // X-axis update: Moves the moon left/right across the 3D grid.
+        moon.position.x = moon.position.x + moon.velocity.x;
+        // Y-axis update: Moves the moon up/down across the 3D grid.
+        moon.position.y = moon.position.y + moon.velocity.y;
+        // Z-axis update: Moves the moon forward/backward across the 3D grid.
+        moon.position.z = moon.position.z + moon.velocity.z;
+
         // Begin the drawing phase for this frame. All rendering elements must be placed between BeginDrawing() and EndDrawing().
         BeginDrawing();
 

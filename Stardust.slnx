@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Stardust/Stardust.vcxproj" />
+  <Project Path="Stardust/Stardust.vcxproj" Id="af744947-d21e-4464-8728-79037a71610a" />
 </Solution>
