@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS // Tells Microsoft to ignore standard C warnings
 // Include the Raylib library header file to access all its functions, such as window creation and 3D drawing.
 #include "raylib.h"
 // Include Raylib's math library for 3D vector math functions.
@@ -5,6 +6,9 @@
 // Include the standard C++ math library for math operations like square root (std::sqrt).
 #include <cmath>
 
+// Define RAYGUI_IMPLEMENTATION to generate the implementation part of the GUI library.
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
 
 // Define a structure to represent a Planet in our 3D space.
 struct Planet {
@@ -73,6 +77,9 @@ int main() {
     // Set the target frame rate to 60 frames per second so the window updates at a consistent, smooth speed.
     SetTargetFPS(60);
 
+    // Initialize the float variable to represent the Earth's mass. This will be updated by our UI slider.
+    float earthMassSlider = 5.97f;
+
     // Enter a continuous while-loop that will run until the user presses the ESC key or closes the window via the cross button.
     while (!WindowShouldClose()) {
         // --- GRAVITY CALCULATION ---
@@ -105,7 +112,8 @@ int main() {
             // We use a predefined gravitational constant (G) tuned for our game scale.
             float G = 0.05f;
             // The force increases with mass and decreases with the square of the distance.
-            float force = G * (earth.mass * moon.mass) / distanceSquared;
+            // We use earthMassSlider here instead of the static earth.mass so the gravity alters in real-time based on the UI.
+            float force = G * (earthMassSlider * moon.mass) / distanceSquared;
 
             // 5. Apply the force as Acceleration to the Moon's Velocity.
             // From Newton's Second Law (F = ma), Acceleration = Force / Mass. We divide by the Moon's mass.
@@ -163,6 +171,16 @@ int main() {
 
         // End the 3D drawing mode to return to standard 2D rendering if necessary, finishing the 3D perspective projection.
         EndMode3D();
+
+        // --- 2D UI RENDERING ---
+        // UI text and controls MUST be drawn outside of the 3D camera mode (i.e., after EndMode3D()).
+        // This is because the UI needs to be drawn in 2D screen space (pixels mapping directly to the window)
+        // rather than 3D world space. If we drew the UI inside Mode3D, it would be affected by the camera's
+        // perspective, position, and rotation, causing it to render as an object scattered in the 3D environment.
+        // Drawing it here overlays the 2D elements seamlessly on top of our 3D world.
+        
+        // Draw the slider. We pass a pointer to earthMassSlider (&earthMassSlider) so raygui modifies it directly.
+        GuiSlider(Rectangle{ 20, 10, 240, 40 }, "1.0", "20.0", &earthMassSlider, 1.0f, 20.0f);
 
         // End the drawing phase and swap the buffers to display the rendered image on the screen.
         EndDrawing();
