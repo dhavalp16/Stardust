@@ -69,19 +69,24 @@ int main() {
     // Assign a float value of 0.073f to the Moon's mass.
     moon.mass = 0.073f;
     // Assign an initial velocity to the Moon. In a 3D vector space, this vector determines how much X, Y, and Z will change each frame.
-    // Setting Z to 0.11f gives the moon an initial push forward so it will orbit instead of crashing straight into Earth.
-    moon.velocity = Vector3{ 0.0f, 0.0f, 0.244f };
+    // Setting Z to 14.64f gives the moon an initial push forward so it will orbit instead of crashing straight into Earth.
+    // (Scaled up from 0.244f by multiplying by 60 because we decoupled physics from framerate using delta time)
+    moon.velocity = Vector3{ 0.0f, 0.0f, 14.64f };
     // Assign a LIGHTGRAY color to the Moon using Raylib's predefined color constants.
     moon.color = LIGHTGRAY;
 
     // Set the target frame rate to 60 frames per second so the window updates at a consistent, smooth speed.
-    SetTargetFPS(60);
+    SetTargetFPS(165);
 
     // Initialize the float variable to represent the Earth's mass. This will be updated by our UI slider.
     float earthMassSlider = 5.97f;
 
     // Enter a continuous while-loop that will run until the user presses the ESC key or closes the window via the cross button.
     while (!WindowShouldClose()) {
+        // Calculate the time it took to render the last frame, in seconds. We use this 'delta time'
+        // to decouple our physics loop from the monitor's frame rate.
+        float dt = GetFrameTime();
+
         // --- GRAVITY CALCULATION ---
         // 1. Calculate the distance vector (direction) from the Moon to the Earth.
         // We subtract the Moon's coordinates from the Earth's to get a vector pointing TO the Earth.
@@ -110,7 +115,8 @@ int main() {
 
             // 4. Calculate the magnitude of the gravitational pull using Newton's Law of Universal Gravitation: F = G * (m1 * m2) / r^2
             // We use a predefined gravitational constant (G) tuned for our game scale.
-            float G = 0.05f;
+            // (Scaled up from 0.05f to 180.0f by multiplying by 60 * 60 to counteract the double application of dt)
+            float G = 180.0f;
             // The force increases with mass and decreases with the square of the distance.
             // We use earthMassSlider here instead of the static earth.mass so the gravity alters in real-time based on the UI.
             float force = G * (earthMassSlider * moon.mass) / distanceSquared;
@@ -119,12 +125,12 @@ int main() {
             // From Newton's Second Law (F = ma), Acceleration = Force / Mass. We divide by the Moon's mass.
             float acceleration = force / moon.mass;
 
-            // 6. Multiply the pure direction vector by the acceleration magnitude.
+            // 6. Multiply the pure direction vector by the acceleration magnitude, and track how much time passed (dt).
             // This spreads the pull across the X, Y, and Z axes appropriately.
             Vector3 velocityChange = Vector3{
-                normalizedDirection.x * acceleration,
-                normalizedDirection.y * acceleration,
-                normalizedDirection.z * acceleration
+                normalizedDirection.x * acceleration * dt,
+                normalizedDirection.y * acceleration * dt,
+                normalizedDirection.z * acceleration * dt
             };
 
             // 7. Add the calculated velocity change to the Moon's current Velocity vector.
@@ -136,23 +142,23 @@ int main() {
         // --- PHYSICS UPDATE ---
         // Every frame before drawing, update the position of all physics bodies by integrating their velocity over one frame.
         // In linear algebra, Velocity is the rate of change of Position. By adding the components of the Velocity vector
-        // to the components of the Position vector, the object moves through the 3D space.
+        // to the components of the Position vector (scaled by dt), the object moves through the 3D space accurately over time.
 
         // Update Earth's Position (currently zero velocity, so it will not move)
-        // X-axis update: Take the current X position and add the X velocity to it.
-        earth.position.x = earth.position.x + earth.velocity.x;
-        // Y-axis update: Take the current Y position and add the Y velocity to it.
-        earth.position.y = earth.position.y + earth.velocity.y;
-        // Z-axis update: Take the current Z position and add the Z velocity to it.
-        earth.position.z = earth.position.z + earth.velocity.z;
+        // X-axis update: Take the current X position and add the X velocity scaled by time to it.
+        earth.position.x = earth.position.x + (earth.velocity.x * dt);
+        // Y-axis update: Take the current Y position and add the Y velocity scaled by time to it.
+        earth.position.y = earth.position.y + (earth.velocity.y * dt);
+        // Z-axis update: Take the current Z position and add the Z velocity scaled by time to it.
+        earth.position.z = earth.position.z + (earth.velocity.z * dt);
 
         // Update Moon's Position
-        // X-axis update: Moves the moon left/right across the 3D grid.
-        moon.position.x = moon.position.x + moon.velocity.x;
-        // Y-axis update: Moves the moon up/down across the 3D grid.
-        moon.position.y = moon.position.y + moon.velocity.y;
-        // Z-axis update: Moves the moon forward/backward across the 3D grid.
-        moon.position.z = moon.position.z + moon.velocity.z;
+        // X-axis update: Moves the moon left/right across the 3D grid, scaled by time.
+        moon.position.x = moon.position.x + (moon.velocity.x * dt);
+        // Y-axis update: Moves the moon up/down across the 3D grid, scaled by time.
+        moon.position.y = moon.position.y + (moon.velocity.y * dt);
+        // Z-axis update: Moves the moon forward/backward across the 3D grid, scaled by time.
+        moon.position.z = moon.position.z + (moon.velocity.z * dt);
 
         // Begin the drawing phase for this frame. All rendering elements must be placed between BeginDrawing() and EndDrawing().
         BeginDrawing();
