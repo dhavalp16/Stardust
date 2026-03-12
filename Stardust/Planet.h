@@ -1,8 +1,18 @@
 #pragma once
 #include "raylib.h"
+// Include the C++ Standard Library string class so we can give each planet a
+// human-readable name (e.g., "Earth", "Moon"). std::string manages its own
+// memory automatically — it grows and shrinks as needed, unlike C-style char
+// arrays which require manual size management.
+#include <string>
 
 // Define a structure to represent a Planet in our 3D space.
 struct Planet {
+  // A human-readable name for this planet (e.g., "Earth", "Moon", "Mars").
+  // Used by the HUD to display which planet is selected. By storing the name
+  // INSIDE the struct, we avoid hardcoded pointer comparisons like
+  // 'selectedPlanet == &earth'. Instead, we just read selectedPlanet->name.
+  std::string name;
   // Vector3 is a struct containing three floats (x, y, z) representing
   // coordinates in 3D space. Memory-wise, it's 12 contiguous bytes (3 * 4
   // bytes).

@@ -132,11 +132,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="resources\shaders\glsl330\lighting.fs" />
+    <None Include="resources\shaders\glsl330\lighting.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Planet.h" />
     <ClInclude Include="raygui.h" />
+    <ClInclude Include="rlights.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

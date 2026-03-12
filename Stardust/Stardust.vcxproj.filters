@@ -24,6 +24,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="resources\shaders\glsl330\lighting.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\shaders\glsl330\lighting.vs">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="raygui.h">
@@ -33,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Planet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rlights.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
