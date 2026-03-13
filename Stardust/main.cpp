@@ -286,59 +286,67 @@ int main() {
   initialPlanets = {
     // SUN — stationary anchor at origin (mass = 2000)
     Planet( { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },
-            2000.0f, 3.00f, "assets/sun.glb", YELLOW, 0.10f ),
+            2000.0f, 3.00f, "assets/sun.glb", YELLOW, 0.10f,
+            "Sun", 500.0f, 5000.0f, 1.0f, 6.0f ),
 
     // MERCURY — r=8, v=sqrt(2000/8)=15.811, θ=1.0 rad (57°)
     Planet( {  8.0f * cosf(1.0f), 0.0f,  8.0f * sinf(1.0f) },
             { -15.811f * sinf(1.0f), 0.0f, 15.811f * cosf(1.0f) },
-            0.055f, 0.25f, "assets/mercury.glb", GRAY, 0.02f ),
+            0.055f, 0.25f, "assets/mercury.glb", GRAY, 0.02f,
+            "Mercury", 0.01f, 1.0f, 0.1f, 1.0f ),
 
     // VENUS — r=14, v=sqrt(2000/14)=11.952, θ=3.0 rad (172°) | retrograde spin
     Planet( { 14.0f * cosf(3.0f), 0.0f, 14.0f * sinf(3.0f) },
             { -11.952f * sinf(3.0f), 0.0f, 11.952f * cosf(3.0f) },
-            0.815f, 0.50f, "assets/venus.glb", ORANGE, -0.01f ),
+            0.815f, 0.50f, "assets/venus.glb", ORANGE, -0.01f,
+            "Venus", 0.1f, 5.0f, 0.1f, 2.0f ),
 
     // EARTH — r=20, v=sqrt(2000/20)=10.000, θ=5.0 rad (286°)
     // Mass inflated to 5.0 so its Hill sphere (1.88 units) can hold the Moon.
     Planet( { 20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f) },
             { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) },
-            5.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f ),
+            5.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f,
+            "Earth", 1.0f, 20.0f, 0.2f, 3.0f ),
 
     // MARS — r=30, v=sqrt(2000/30)=8.165, θ=0.5 rad (29°)
     Planet( { 30.0f * cosf(0.5f), 0.0f, 30.0f * sinf(0.5f) },
             { -8.165f * sinf(0.5f), 0.0f, 8.165f * cosf(0.5f) },
-            0.107f, 0.35f, "assets/mars.glb", RED, 0.48f ),
+            0.107f, 0.35f, "assets/mars.glb", RED, 0.48f,
+            "Mars", 0.01f, 2.0f, 0.1f, 1.5f ),
 
     // JUPITER — r=55, v=sqrt(2000/55)=6.030, θ=2.5 rad (143°)
     // Mass reduced from 50→3 to stop gravitational slingshots on inner planets.
     Planet( { 55.0f * cosf(2.5f), 0.0f, 55.0f * sinf(2.5f) },
             { -6.030f * sinf(2.5f), 0.0f, 6.030f * cosf(2.5f) },
-            3.00f, 1.80f, "assets/jupiter.glb", BEIGE, 1.50f ),
+            3.00f, 1.80f, "assets/jupiter.glb", BEIGE, 1.50f,
+            "Jupiter", 0.5f, 15.0f, 0.5f, 4.0f ),
 
     // SATURN — r=80, v=sqrt(2000/80)=5.000, θ=4.5 rad (258°)
     // Mass reduced from 30→1.5 to prevent perturbation cascades.
     Planet( { 80.0f * cosf(4.5f), 0.0f, 80.0f * sinf(4.5f) },
             { -5.000f * sinf(4.5f), 0.0f, 5.000f * cosf(4.5f) },
-            1.50f, 1.50f, "assets/saturn.glb", GOLD, 1.30f ),
+            1.50f, 1.50f, "assets/saturn.glb", GOLD, 1.30f,
+            "Saturn", 0.2f, 10.0f, 0.5f, 3.5f ),
 
     // URANUS — r=110, v=sqrt(2000/110)=4.264, θ=1.5 rad (86°) | retrograde spin
     Planet( { 110.0f * cosf(1.5f), 0.0f, 110.0f * sinf(1.5f) },
             { -4.264f * sinf(1.5f), 0.0f, 4.264f * cosf(1.5f) },
-            0.50f, 1.00f, "assets/uranus.glb", SKYBLUE, -0.80f ),
+            0.50f, 1.00f, "assets/uranus.glb", SKYBLUE, -0.80f,
+            "Uranus", 0.1f, 5.0f, 0.3f, 2.5f ),
 
     // NEPTUNE — r=140, v=sqrt(2000/140)=3.780, θ=3.5 rad (201°)
     Planet( { 140.0f * cosf(3.5f), 0.0f, 140.0f * sinf(3.5f) },
             { -3.780f * sinf(3.5f), 0.0f, 3.780f * cosf(3.5f) },
-            0.60f, 0.95f, "assets/neptune.glb", DARKBLUE, 0.90f ),
+            0.60f, 0.95f, "assets/neptune.glb", DARKBLUE, 0.90f,
+            "Neptune", 0.1f, 5.0f, 0.3f, 2.5f ),
 
     // MOON — orbits Earth at distance 0.8 (42% of Earth's Hill sphere = 1.88)
     // Position = Earth position + {0.8, 0, 0}
     // Velocity = Earth velocity + {0, 0, 2.5}  where 2.5 = sqrt(G * M_earth / 0.8)
-    // This guarantees the Moon starts with exactly the right local circular
-    // orbital speed around Earth, while inheriting Earth's solar orbital momentum.
     Planet( { 20.0f * cosf(5.0f) + 0.8f, 0.0f, 20.0f * sinf(5.0f) },
             { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 2.5f },
-            0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f ),
+            0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f,
+            "Moon", 0.001f, 0.5f, 0.05f, 0.5f ),
   };
 
   // ===========================================================================
@@ -469,6 +477,16 @@ int main() {
   bool isCameraActive = false;
 
   // ===========================================================================
+  // CAMERA SPEED — Adjustable with Scroll Wheel
+  // ===========================================================================
+  // Raylib's built-in CAMERA_FREE has a hardcoded move speed that's far too
+  // slow for our 280-unit-wide solar system. We define a custom speed variable
+  // that the user can adjust with the mouse scroll wheel. This gives a much
+  // more responsive fly-through experience.
+  // ===========================================================================
+  float cameraSpeed = 2.0f;
+
+  // ===========================================================================
   // GRAVITATIONAL CONSTANT — Shared by all gravity calculations
   // ===========================================================================
   // We define G as a named constant so it's easy to find and tweak. This value
@@ -544,10 +562,52 @@ int main() {
         isCameraActive = true;
       }
 
-      // Let Raylib's built-in free camera system handle WASD + mouse input.
-      // '&camera' passes the address of our camera so it can be modified.
-      // 'CAMERA_FREE' is a Raylib constant selecting the free-flight mode.
+      // =====================================================================
+      // MANUAL CAMERA MOVEMENT — Configurable WASD Speed
+      // =====================================================================
+      // Raylib's CAMERA_FREE has a hardcoded speed that's too slow for our
+      // 280-unit solar system. We use UpdateCamera for mouse-look only, then
+      // manually apply WASD movement at our adjustable cameraSpeed.
+      //
+      // GetCameraForward/GetCameraRight return normalized direction vectors
+      // from the camera's current orientation. Multiplying by cameraSpeed * dt
+      // gives frame-rate-independent movement.
+      //
+      // Scroll wheel adjusts cameraSpeed for faster/slower navigation.
+      // =====================================================================
       UpdateCamera(&camera, CAMERA_FREE);
+
+      // Calculate normalized direction vectors from camera orientation
+      Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+      Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, camera.up));
+
+      float moveAmount = cameraSpeed * dt;
+
+      // Manual WASD movement at our custom speed (layered on top of UpdateCamera)
+      if (IsKeyDown(KEY_W)) {
+        camera.position = Vector3Add(camera.position, Vector3Scale(forward, moveAmount));
+        camera.target   = Vector3Add(camera.target,   Vector3Scale(forward, moveAmount));
+      }
+      if (IsKeyDown(KEY_S)) {
+        camera.position = Vector3Subtract(camera.position, Vector3Scale(forward, moveAmount));
+        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(forward, moveAmount));
+      }
+      if (IsKeyDown(KEY_D)) {
+        camera.position = Vector3Add(camera.position, Vector3Scale(right, moveAmount));
+        camera.target   = Vector3Add(camera.target,   Vector3Scale(right, moveAmount));
+      }
+      if (IsKeyDown(KEY_A)) {
+        camera.position = Vector3Subtract(camera.position, Vector3Scale(right, moveAmount));
+        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(right, moveAmount));
+      }
+
+      // Scroll wheel adjusts camera speed. Clamp between 0.5 and 50.0.
+      float wheel = GetMouseWheelMove();
+      if (wheel != 0.0f) {
+        cameraSpeed += wheel * 1.0f;
+        if (cameraSpeed < 0.5f) cameraSpeed = 0.5f;
+        if (cameraSpeed > 50.0f) cameraSpeed = 50.0f;
+      }
     } else {
       // User is NOT holding Right Mouse Button.
 
@@ -893,21 +953,23 @@ int main() {
     // =========================================================================
     if (selectedPlanet != nullptr) {
       // --- MASS SLIDER ---
-      GuiSlider(Rectangle{20, 10, 240, 30}, // Position: top-left, 240px wide
-                "Mass 0.1",                 // Left label: minimum
-                "200.0",                    // Right label: maximum
-                &selectedPlanet->mass,      // Pointer to the planet's mass
-                0.1f,                       // Minimum slider value
-                200.0f                      // Maximum slider value
+      // Uses per-planet massMin/massMax for safe ranges.
+      GuiSlider(Rectangle{20, 10, 240, 30},
+                "Mass",
+                TextFormat("%.2f", selectedPlanet->mass),
+                &selectedPlanet->mass,
+                selectedPlanet->massMin,
+                selectedPlanet->massMax
       );
 
       // --- RADIUS SLIDER ---
-      GuiSlider(Rectangle{20, 50, 240, 30}, // Position: below the mass slider
-                "Radius 0.1",               // Left label: minimum
-                "5.0",                      // Right label: maximum
-                &selectedPlanet->radius,    // Pointer to the planet's radius
-                0.1f,                       // Minimum slider value
-                5.0f                        // Maximum slider value
+      // Uses per-planet radiusMin/radiusMax for safe ranges.
+      GuiSlider(Rectangle{20, 50, 240, 30},
+                "Radius",
+                TextFormat("%.2f", selectedPlanet->radius),
+                &selectedPlanet->radius,
+                selectedPlanet->radiusMin,
+                selectedPlanet->radiusMax
       );
     }
 
@@ -998,29 +1060,22 @@ int main() {
 
     // Display helpful hints for the user at the bottom of the screen so they
     // know how to use the controls.
-    DrawText("SPACE: Play/Pause | RMB+WASD: Camera | LMB: Select | RESET: "
-             "Top-Left",
+    DrawText("SPACE: Play/Pause | RMB+WASD: Camera | Scroll: Speed | LMB: Select",
              10, screenHeight - 30, 16, DARKGRAY);
+
+    // Display camera speed so the user knows their current navigation speed.
+    DrawText(TextFormat("Cam Speed: %.1f", cameraSpeed),
+             screenWidth - 200, 80, 16, GRAY);
 
     // =========================================================================
     // FEATURE 2 (continued): HUD — Display selected planet info
     // =========================================================================
-    //
-    // REFACTORED: Instead of comparing pointer addresses to hardcoded variables
-    // (selectedPlanet == &earth), we now use the planet's 'name' field.
-    // This is cleaner and scales to any number of planets automatically.
-    //
-    // selectedPlanet->name returns the std::string stored in the planet.
-    // .c_str() converts it to a C-style 'const char*' that DrawText requires,
-    // since DrawText is a C function that doesn't understand std::string.
-    //
-    // TextFormat() is a Raylib helper that works like printf/sprintf — it takes
-    // a format string and arguments, returning a formatted C string. The '%s'
-    // is a placeholder that gets replaced by the planet's name.
+    // Uses the short 'name' field (e.g., "Earth") instead of modelPath.
+    // Positioned at screenWidth - 300 to avoid text clipping off the window.
     // =========================================================================
     if (selectedPlanet != nullptr) {
-      DrawText(TextFormat("Selected: %s", selectedPlanet->modelPath.c_str()),
-               screenWidth - 200, // X position: 200px from right edge
+      DrawText(TextFormat("Selected: %s", selectedPlanet->name.c_str()),
+               screenWidth - 300, // X position: 300px from right edge (wider margin)
                50,                // Y position: below the state indicator
                20,                // Font size
                YELLOW             // Matches the wireframe indicator color

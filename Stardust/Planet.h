@@ -30,6 +30,13 @@ struct Planet {
   float rotationSpeed;
   // Lifecycle variable.
   bool isAlive;
+  // Human-readable display name for the HUD (e.g., "Earth", "Moon").
+  std::string name;
+  // Per-planet slider ranges — each body gets its own safe min/max to prevent
+  // accidentally setting the Sun's mass to 0.1 or the Moon's radius to 5.0,
+  // which would instantly destabilize the simulation.
+  float massMin, massMax;
+  float radiusMin, radiusMax;
 
   // EXPLANATION: How the C++ Constructor makes struct initialization cleaner.
   // A constructor allows us to initialize a Planet object in a single line
@@ -37,7 +44,10 @@ struct Planet {
   // line-by-line (e.g., p.mass = ..., p.radius = ...). The colon syntax here 
   // is known as a "member initializer list", which directly constructs the members 
   // in memory, making it very clean and efficient.
-  Planet(Vector3 pos, Vector3 vel, float m, float r, std::string path, Color c, float rotSpeed)
+  Planet(Vector3 pos, Vector3 vel, float m, float r, std::string path, Color c,
+         float rotSpeed, std::string n,
+         float mMin, float mMax, float rMin, float rMax)
       : position(pos), velocity(vel), mass(m), radius(r), modelPath(path), tint(c),
-        rotationAngle(0.0f), rotationSpeed(rotSpeed), isAlive(true) {}
+        rotationAngle(0.0f), rotationSpeed(rotSpeed), isAlive(true),
+        name(n), massMin(mMin), massMax(mMax), radiusMin(rMin), radiusMax(rMax) {}
 };
