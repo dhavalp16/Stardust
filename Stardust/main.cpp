@@ -134,9 +134,9 @@ int main() {
   // Declare a Camera3D struct instance named 'camera' to handle our 3D
   // viewpoint.
   Camera3D camera = {};
-  // Set the camera's position in 3D space. We place it at x=0.0f, y=10.0f (up),
-  // and z=10.0f (backwards). This creates a Vector3 in memory.
-  camera.position = Vector3{0.0f, 10.0f, 10.0f};
+  // Set the camera's position in 3D space. Pulled far back to see the entire
+  // 280-unit-wide solar system (Neptune orbits at r=140).
+  camera.position = Vector3{0.0f, 160.0f, 200.0f};
   // Set the camera's target to look at. We point it at the center of the world,
   // meaning x=0.0f, y=0.0f, z=0.0f. This is another Vector3 in memory.
   camera.target = Vector3{0.0f, 0.0f, 0.0f};
@@ -258,130 +258,113 @@ int main() {
   // ===========================================================================
   std::vector<Model> planetModels;
 
-  // CRITICAL: Pre-allocate memory for 8 planets in ALL vectors. This prevents
+  // CRITICAL: Pre-allocate memory for 16 planets in ALL vectors. This prevents
   // reallocation when we push_back() planets, keeping our pointers safe.
-  initialPlanets.reserve(8);
-  activePlanets.reserve(8);
-  planetModels.reserve(8);
+  initialPlanets.reserve(16);
+  activePlanets.reserve(16);
+  planetModels.reserve(16);
 
   // ===========================================================================
-  // PLANET INITIALIZATION — Setting Up Earth and Moon
+  // PLANET INITIALIZATION — Setting Up The 9-Body Solar System
   // ===========================================================================
   //
-  // We create temporary Planet structs, configure their properties, and then
-  // push them into the 'initialPlanets' vector. push_back() COPIES the struct
-  // into the vector's internal memory — the temporary variable can be reused
-  // or go out of scope without affecting the vector's copy.
+  // The C++ Constructor makes struct initialization cleaner by allowing us to
+  // initialize a complete struct inline inside the array, avoiding repetitive 
+  // 'p.mass = X; p.radius = Y;' expressions entirely.
   // ===========================================================================
 
-  // --- EARTH ---
-  Planet earth = {};
-  earth.name = "Earth";
-  earth.position = Vector3{0.0f, 0.0f, 0.0f};
-  earth.radius = 2.0f;
-  earth.mass = 100.0f;
-  earth.color = BLUE;
+  // ─── STABLE WIDE-ORBIT SCATTER ───────────────────────────────────────────────
+  // G = 1.0f, M_sun = 2000.0f
+  // All orbital speeds derived from v = sqrt(G * M_sun / r) for circular orbits.
+  // Gas giant masses drastically reduced (Jupiter 50→3, Saturn 30→1.5) to prevent
+  // inner-planet slingshots. Earth inflated to 5.0 so its Hill sphere (1.88 units)
+  // safely contains the Moon at distance 0.8 (42% of Hill radius).
+  //
+  // Scatter pattern: position  = { r*cos(θ), 0, r*sin(θ) }
+  //                  velocity  = { -v*sin(θ), 0, v*cos(θ) }  (tangential, CCW)
+  // ─────────────────────────────────────────────────────────────────────────────
+  initialPlanets = {
+    // SUN — stationary anchor at origin (mass = 2000)
+    Planet( { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },
+            2000.0f, 3.00f, "assets/sun.glb", YELLOW, 0.10f ),
 
-  // --- MOON ---
-  Planet moon = {};
-  moon.name = "Moon";
-  moon.position = Vector3{5.0f, 0.0f, 0.0f};
-  moon.radius = 0.5f;
-  moon.mass = 0.073f;
-  // ORBITAL VELOCITY DERIVATION:
-  // ----------------------------
-  // For a perfectly circular orbit, the gravitational pull must exactly equal
-  // the centripetal force needed to keep the Moon on its circular path:
-  //
-  //   Gravitational force:  F = G * M * m / r²
-  //   Centripetal force:    F = m * v² / r
-  //
-  // Setting them equal and solving for v:
-  //   G * M * m / r² = m * v² / r
-  //   G * M / r = v²                (mass 'm' cancels, multiply both sides by
-  //   r) v = sqrt(G * M / r)
-  //
-  // Plugging in our values:
-  //   G = 180.0   (our scaled gravitational constant)
-  //   M = 100.0   (Earth's mass — the dominant body)
-  //   r = 5.0     (distance from Earth to Moon)
-  //
-  //   v = sqrt(180 * 100 / 5)
-  //     = sqrt(18000 / 5)
-  //     = sqrt(3600)
-  //     = 60.0 units/second
-  //
-  // This is the EXACT speed needed for a circular orbit at radius 5.0.
-  // Too slow → Moon spirals inward. Too fast → Moon flies away.
-  moon.velocity = Vector3{0.0f, 0.0f, 10.0f};
-  moon.color = LIGHTGRAY;
+    // MERCURY — r=8, v=sqrt(2000/8)=15.811, θ=1.0 rad (57°)
+    Planet( {  8.0f * cosf(1.0f), 0.0f,  8.0f * sinf(1.0f) },
+            { -15.811f * sinf(1.0f), 0.0f, 15.811f * cosf(1.0f) },
+            0.055f, 0.25f, "assets/mercury.glb", GRAY, 0.02f ),
+
+    // VENUS — r=14, v=sqrt(2000/14)=11.952, θ=3.0 rad (172°) | retrograde spin
+    Planet( { 14.0f * cosf(3.0f), 0.0f, 14.0f * sinf(3.0f) },
+            { -11.952f * sinf(3.0f), 0.0f, 11.952f * cosf(3.0f) },
+            0.815f, 0.50f, "assets/venus.glb", ORANGE, -0.01f ),
+
+    // EARTH — r=20, v=sqrt(2000/20)=10.000, θ=5.0 rad (286°)
+    // Mass inflated to 5.0 so its Hill sphere (1.88 units) can hold the Moon.
+    Planet( { 20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f) },
+            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) },
+            5.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f ),
+
+    // MARS — r=30, v=sqrt(2000/30)=8.165, θ=0.5 rad (29°)
+    Planet( { 30.0f * cosf(0.5f), 0.0f, 30.0f * sinf(0.5f) },
+            { -8.165f * sinf(0.5f), 0.0f, 8.165f * cosf(0.5f) },
+            0.107f, 0.35f, "assets/mars.glb", RED, 0.48f ),
+
+    // JUPITER — r=55, v=sqrt(2000/55)=6.030, θ=2.5 rad (143°)
+    // Mass reduced from 50→3 to stop gravitational slingshots on inner planets.
+    Planet( { 55.0f * cosf(2.5f), 0.0f, 55.0f * sinf(2.5f) },
+            { -6.030f * sinf(2.5f), 0.0f, 6.030f * cosf(2.5f) },
+            3.00f, 1.80f, "assets/jupiter.glb", BEIGE, 1.50f ),
+
+    // SATURN — r=80, v=sqrt(2000/80)=5.000, θ=4.5 rad (258°)
+    // Mass reduced from 30→1.5 to prevent perturbation cascades.
+    Planet( { 80.0f * cosf(4.5f), 0.0f, 80.0f * sinf(4.5f) },
+            { -5.000f * sinf(4.5f), 0.0f, 5.000f * cosf(4.5f) },
+            1.50f, 1.50f, "assets/saturn.glb", GOLD, 1.30f ),
+
+    // URANUS — r=110, v=sqrt(2000/110)=4.264, θ=1.5 rad (86°) | retrograde spin
+    Planet( { 110.0f * cosf(1.5f), 0.0f, 110.0f * sinf(1.5f) },
+            { -4.264f * sinf(1.5f), 0.0f, 4.264f * cosf(1.5f) },
+            0.50f, 1.00f, "assets/uranus.glb", SKYBLUE, -0.80f ),
+
+    // NEPTUNE — r=140, v=sqrt(2000/140)=3.780, θ=3.5 rad (201°)
+    Planet( { 140.0f * cosf(3.5f), 0.0f, 140.0f * sinf(3.5f) },
+            { -3.780f * sinf(3.5f), 0.0f, 3.780f * cosf(3.5f) },
+            0.60f, 0.95f, "assets/neptune.glb", DARKBLUE, 0.90f ),
+
+    // MOON — orbits Earth at distance 0.8 (42% of Earth's Hill sphere = 1.88)
+    // Position = Earth position + {0.8, 0, 0}
+    // Velocity = Earth velocity + {0, 0, 2.5}  where 2.5 = sqrt(G * M_earth / 0.8)
+    // This guarantees the Moon starts with exactly the right local circular
+    // orbital speed around Earth, while inheriting Earth's solar orbital momentum.
+    Planet( { 20.0f * cosf(5.0f) + 0.8f, 0.0f, 20.0f * sinf(5.0f) },
+            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 2.5f },
+            0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f ),
+  };
 
   // ===========================================================================
   // FEATURE 6: CONSERVATION OF MOMENTUM — Fixing System Drift
   // ===========================================================================
-  //
-  // THE PROBLEM: WHY DOES THE SYSTEM DRIFT?
-  // -----------------------------------------
-  // In our previous code, Earth started with velocity = {0, 0, 0} while the
-  // Moon had velocity = {0, 0, 14.64}. Let's calculate the TOTAL MOMENTUM
-  // of the system:
-  //
-  //   Total Momentum (p) = m_earth * v_earth + m_moon * v_moon
-  //                      = 5.97 * {0,0,0} + 0.073 * {0,0,14.64}
-  //                      = {0,0,0} + {0, 0, 1.06872}
-  //                      = {0, 0, 1.06872}   ← NOT ZERO!
-  //
-  // Newton's First Law says: the center of mass of an isolated system moves
-  // at a constant velocity. Since our total momentum is NOT zero, the center
-  // of mass has a non-zero velocity, which means the ENTIRE system drifts
-  // through space in the +Z direction — even though gravity is working
-  // correctly between the two bodies!
-  //
-  // THE FIX: CONSERVATION OF MOMENTUM
-  // -----------------------------------
-  // To keep the system stationary, we need total momentum = 0:
-  //
-  //   m_earth * v_earth + m_moon * v_moon = 0
-  //
-  // Solving for v_earth:
-  //
-  //   m_earth * v_earth = -(m_moon * v_moon)
-  //   v_earth = -(m_moon / m_earth) * v_moon
-  //
-  // Plugging in our values:
-  //   v_earth.z = -(0.073 / 5.97) * 14.64
-  //             = -0.01222... * 14.64
-  //             ≈ -0.17895 units/second
-  //
-  // This tiny counter-velocity on Earth perfectly cancels the Moon's momentum,
-  // making the total system momentum exactly zero. The center of mass stays
-  // fixed, and both bodies orbit their shared BARYCENTER (center of mass)
-  // without drifting.
-  //
-  // THE MATH IN CODE:
-  //   We compute this for ALL three axes (X, Y, Z) even though currently only
-  //   Z is non-zero — this future-proofs the code for arbitrary initial
-  //   velocities.
+  // We sum the momentum of all celestial bodies and then apply an exact
+  // counter-velocity to the heaviest body (the Sun) to ensure the total system
+  // momentum is zero. This prevents the entire solar system from drifting.
   // ===========================================================================
-  earth.velocity = Vector3{
-      -(moon.mass / earth.mass) *
-          moon.velocity.x, // X: cancel Moon's X momentum
-      -(moon.mass / earth.mass) *
-          moon.velocity.y,                        // Y: cancel Moon's Y momentum
-      -(moon.mass / earth.mass) * moon.velocity.z // Z: cancel Moon's Z momentum
-  };
+  Vector3 totalMomentum = {0.0f, 0.0f, 0.0f};
+  for (size_t i = 1; i < initialPlanets.size(); i++) {
+      totalMomentum.x += initialPlanets[i].mass * initialPlanets[i].velocity.x;
+      totalMomentum.y += initialPlanets[i].mass * initialPlanets[i].velocity.y;
+      totalMomentum.z += initialPlanets[i].mass * initialPlanets[i].velocity.z;
+  }
+  
+  // Apply counter-velocity to the Sun (index 0)
+  initialPlanets[0].velocity.x = -totalMomentum.x / initialPlanets[0].mass;
+  initialPlanets[0].velocity.y = -totalMomentum.y / initialPlanets[0].mass;
+  initialPlanets[0].velocity.z = -totalMomentum.z / initialPlanets[0].mass;
 
-  // Push both planets into the initial (blueprint) vector.
-  // push_back() copies the entire Planet struct into the vector's contiguous
-  // memory block. After this, the local 'earth' and 'moon' variables are
-  // independent copies — modifying them won't affect the vector.
-  initialPlanets.push_back(earth);
-  initialPlanets.push_back(moon);
-
-  // Load the 3D .glb models into GPU memory and push them into the parallel
-  // graphics array IN THE EXACT SAME ORDER as the physics planets.
-  planetModels.push_back(LoadModel("assets/earth.glb"));
-  planetModels.push_back(LoadModel("assets/moon.glb"));
+  // Locate the existing LoadModel() calls in main.cpp and replace them entirely with a loop 
+  // over initialPlanets, loading p.modelPath in order.
+  for (size_t i = 0; i < initialPlanets.size(); i++) {
+      planetModels.push_back(LoadModel(initialPlanets[i].modelPath.c_str()));
+  }
 
   // Apply the lighting shader to ALL materials on ALL loaded models so they
   // can receive the light from our directional sun.
@@ -492,7 +475,7 @@ int main() {
   // is NOT the real-world gravitational constant (6.674e-11) — it's scaled up
   // to produce visible orbital behavior at the scale of our simulation.
   // ===========================================================================
-  const float G = 5.0f;
+  const float G = 1.0f;
 
   // Enter a continuous while-loop that will run until the user presses the ESC
   // key or closes the window via the cross button.
@@ -809,6 +792,8 @@ int main() {
     // slider! The physics bounding sphere perfectly overlays the visual mesh.
     // =========================================================================
     for (size_t i = 0; i < activePlanets.size(); i++) {
+      if (!activePlanets[i].isAlive) continue; // Skip rendering destroyed planets
+      
       const float visualScaleFactor = 1.0f;
       // THE HOLY GRAIL OF PHYSICS ENGINES (1:1 Scale Normalization):
       // ------------------------------------------------------------
@@ -822,13 +807,25 @@ int main() {
                             activePlanets[i].radius * visualScaleFactor,
                             activePlanets[i].radius * visualScaleFactor};
 
+      // EXPLANATION: Why RAD2DEG is required for Raylib's rotation functions.
+      // Raylib's mathematical functions (like sin, cos in shaders) often work internally
+      // with radians, but the high-level DrawModelEx function expects rotation angles 
+      // in DEGREES. Since rotationSpeed is typically defined in radians per second 
+      // (a standard physics unit), we multiply by RAD2DEG to convert it to degrees 
+      // before feeding it into the drawing function.
+      if (currentState == PLAYING) {
+          activePlanets[i].rotationAngle += activePlanets[i].rotationSpeed * dt * RAD2DEG;
+      }
+
+      // WHITE prevents Raylib from multiplying the custom Blender Albedo textures
+      // by a solid color, allowing the true authored textures to render.
       DrawModelEx(
           planetModels[i],           // The 3D model from VRAM
           activePlanets[i].position, // The current physics world position
           Vector3{0.0f, 1.0f, 0.0f}, // Rotate around Y-axis (up)
-          0.0f,                      // No local rotation applied
+          activePlanets[i].rotationAngle, // Factor in dynamic rotation angle
           modelScale,                // Dynamic scale matching the GUI slider
-          WHITE // Tint color (WHITE means "use original textures unmodified")
+          WHITE                      // Use true authored textures (no color tinting)
       );
     }
 
@@ -1022,7 +1019,7 @@ int main() {
     // is a placeholder that gets replaced by the planet's name.
     // =========================================================================
     if (selectedPlanet != nullptr) {
-      DrawText(TextFormat("Selected: %s", selectedPlanet->name.c_str()),
+      DrawText(TextFormat("Selected: %s", selectedPlanet->modelPath.c_str()),
                screenWidth - 200, // X position: 200px from right edge
                50,                // Y position: below the state indicator
                20,                // Font size
