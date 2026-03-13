@@ -7,6 +7,9 @@
 // Include the standard C++ math library for math operations like square root
 // (std::sqrt).
 #include <cmath>
+// Include the C++ Standard Library algorithms for std::remove_if, used to
+// clean up dead explosions from the pool without leaving gaps.
+#include <algorithm>
 
 // Define the implementation macro for the single-file rlights header
 #define RLIGHTS_IMPLEMENTATION
@@ -103,6 +106,41 @@
 // =============================================================================
 enum EngineState { PAUSED, PLAYING, SUMMARY };
 
+// =============================================================================
+// EXPLOSION POOL — Transient Visual Effects for Collisions
+// =============================================================================
+//
+// WHAT IS AN EXPLOSION STRUCT?
+// ----------------------------
+// When two planets collide, we “tombstone” them (set isAlive = false) and spawn
+// a short-lived visual effect at their midpoint. This struct holds everything
+// needed to animate one expanding, fading wireframe sphere.
+//
+// WHY A GLOBAL VECTOR?
+// --------------------
+// Unlike activePlanets (which is a parallel array paired with planetModels),
+// explosions are standalone transient effects with NO parallel dependencies.
+// This means it IS safe to use .erase() on them — removing a dead explosion
+// doesn’t desynchronize any other array.
+//
+// WHY NOT ERASE PLANETS?
+// ----------------------
+// activePlanets[i] and planetModels[i] MUST stay aligned. If we erased
+// activePlanets[2], then planetModels[3] would suddenly render at position [2],
+// showing Jupiter’s model on Saturn’s physics body. This is a classic parallel
+// array desynchronization bug that causes visual glitches and Segfaults on
+// Reset (when we deep-copy initialPlanets back). Tombstoning avoids this
+// entirely: dead planets stay in the array, just invisible.
+// =============================================================================
+struct Explosion {
+  Vector3 position;   // Center of the explosion in world space
+  float radius;       // Current expanding radius
+  float maxRadius;    // Maximum radius before the explosion dies
+  float alpha;        // Opacity (1.0 = fully visible, 0.0 = invisible/dead)
+  bool isAlive;       // Whether this explosion is still animating
+};
+std::vector<Explosion> activeExplosions;
+
 // The main function where our C++ program begins execution.
 int main() {
   // Initialize the window with a width of 1280 pixels.
@@ -125,11 +163,15 @@ int main() {
   // so we can update it every frame for accurate specular highlights.
   int viewPosLoc = GetShaderLocation(lightShader, "viewPos");
 
-  // Create a directional light (like the Sun) pointing at the entire scene.
-  Light sun = CreateLight(LIGHT_DIRECTIONAL,
-                          Vector3{10.0f, 10.0f, 10.0f}, // Position in sky
-                          Vector3Zero(),                // Target (origin)
-                          WHITE, lightShader);          // Color and shader
+  // Create a point light at the Sun's position (the origin). Unlike a
+  // directional light (which illuminates everything from one fixed angle like
+  // a distant star), a POINT light radiates outward in all directions from a
+  // specific location. This means each planet is correctly lit from the Sun's
+  // side — the face toward the Sun is bright, the far side is dark.
+  Light sun = CreateLight(LIGHT_POINT,
+                          Vector3{0.0f, 0.0f, 0.0f},  // Position: Sun at origin
+                          Vector3Zero(),               // Target (unused for point)
+                          WHITE, lightShader);         // Color and shader
 
   // Declare a Camera3D struct instance named 'camera' to handle our 3D
   // viewpoint.
@@ -264,6 +306,11 @@ int main() {
   activePlanets.reserve(16);
   planetModels.reserve(16);
 
+  // Pre-allocate the explosion pool. 32 slots is generous — in practice we’ll
+  // rarely have more than a handful active at once, but reserve() ensures no
+  // reallocation surprises during gameplay.
+  activeExplosions.reserve(32);
+
   // ===========================================================================
   // PLANET INITIALIZATION — Setting Up The 9-Body Solar System
   // ===========================================================================
@@ -302,10 +349,11 @@ int main() {
             "Venus", 0.1f, 5.0f, 0.1f, 2.0f ),
 
     // EARTH — r=20, v=sqrt(2000/20)=10.000, θ=5.0 rad (286°)
-    // Mass inflated to 5.0 so its Hill sphere (1.88 units) can hold the Moon.
+    // Mass inflated to 10.0 so its Hill sphere (2.37 units) can comfortably
+    // hold the Moon at distance 0.9 (38% of Hill radius — very stable).
     Planet( { 20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f) },
             { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) },
-            5.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f,
+            10.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f,
             "Earth", 1.0f, 20.0f, 0.2f, 3.0f ),
 
     // MARS — r=30, v=sqrt(2000/30)=8.165, θ=0.5 rad (29°)
@@ -340,11 +388,14 @@ int main() {
             0.60f, 0.95f, "assets/neptune.glb", DARKBLUE, 0.90f,
             "Neptune", 0.1f, 5.0f, 0.3f, 2.5f ),
 
-    // MOON — orbits Earth at distance 0.8 (42% of Earth's Hill sphere = 1.88)
-    // Position = Earth position + {0.8, 0, 0}
-    // Velocity = Earth velocity + {0, 0, 2.5}  where 2.5 = sqrt(G * M_earth / 0.8)
-    Planet( { 20.0f * cosf(5.0f) + 0.8f, 0.0f, 20.0f * sinf(5.0f) },
-            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 2.5f },
+    // MOON — orbits Earth at distance 0.9 (38% of Earth's Hill sphere = 2.37)
+    // Position = Earth position + {0.9, 0, 0}
+    // Velocity = Earth velocity + {0, 0, 3.333}  where 3.333 = sqrt(G * M_earth / r)
+    //          = sqrt(10.0 / 0.9) = sqrt(11.11) = 3.333
+    // At 38% of the Hill sphere, this is deep in the stable zone for Euler
+    // integration. Clearance above combined radii (0.70) is 0.20 units.
+    Planet( { 20.0f * cosf(5.0f) + 0.9f, 0.0f, 20.0f * sinf(5.0f) },
+            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 3.333f },
             0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f,
             "Moon", 0.001f, 0.5f, 0.05f, 0.5f ),
   };
@@ -374,9 +425,13 @@ int main() {
       planetModels.push_back(LoadModel(initialPlanets[i].modelPath.c_str()));
   }
 
+  // Cache the default, unlit shader that Raylib automatically assigns to the Sun
+  // model when it's loaded. We need this so the Sun can emit its own light and
+  // not be incorrectly shaded by the point light at its center.
+  Shader defaultSunShader = planetModels[0].materials[0].shader;
+
   // Apply the lighting shader to ALL materials on ALL loaded models so they
-  // can receive the light from our directional sun.
-  // Apply the lighting shader to ALL materials on ALL loaded models
+  // can receive the light from our point source.
   for (size_t i = 0; i < planetModels.size(); i++) {
     for (int m = 0; m < planetModels[i].materialCount; m++) {
       planetModels[i].materials[m].shader = lightShader;
@@ -785,14 +840,122 @@ int main() {
       // Each pair applies gravity in BOTH directions (Newton's Third Law),
       // so every planet feels the pull of every other planet.
       // =====================================================================
-      for (size_t i = 0; i < activePlanets.size(); i++) {
-        for (size_t j = i + 1; j < activePlanets.size(); j++) {
-          // Planet i pulls planet j toward it.
-          ApplyGravity(activePlanets[i], activePlanets[i].mass,
-                       activePlanets[j], G, dt);
-          // Planet j pulls planet i toward it (Newton's Third Law).
-          ApplyGravity(activePlanets[j], activePlanets[j].mass,
-                       activePlanets[i], G, dt);
+      // =====================================================================
+      // PHYSICS SUB-STEPPING (Crucial for Orbital Stability)
+      // =====================================================================
+      // The Moon has a very tight, fast orbit (period ~1.6 seconds). At 60 FPS,
+      // a single frame's dt (0.016s) represents 1% of the entire orbit. In
+      // numerical integration (Euler), taking such "large" steps introduces
+      // error, causing tight orbits to drift and crash.
+      //
+      // The classic engine solution is to slice the frame's dt into smaller
+      // micro-steps. Running the physics 10 times per frame with 1/10th the dt
+      // completely stabilizes the math without noticeable performance loss.
+      // =====================================================================
+      const int SUB_STEPS = 10;
+      float subDt = dt / SUB_STEPS;
+
+      for (int step = 0; step < SUB_STEPS; step++) {
+        // ---------------------------------------------------------------------
+        // N-BODY GRAVITY LOOP
+        // ---------------------------------------------------------------------
+        for (size_t i = 0; i < activePlanets.size(); i++) {
+          for (size_t j = i + 1; j < activePlanets.size(); j++) {
+            // =================================================================
+            // TOMBSTONE GUARD — Skip Dead Planets
+            // =================================================================
+            // If either planet in this pair has already been destroyed (isAlive
+            // == false), there is no point calculating gravity between them.
+            // Without this guard, dead planets would continue to exert phantom
+            // gravitational forces, and distance calculations on overlapping
+            // corpses could produce NaN/Inf values that corrupt the simulation.
+            // =================================================================
+            if (!activePlanets[i].isAlive || !activePlanets[j].isAlive) continue;
+
+            // Planet i pulls planet j toward it.
+            ApplyGravity(activePlanets[i], activePlanets[i].mass,
+                         activePlanets[j], G, subDt);
+            // Planet j pulls planet i toward it (Newton's Third Law).
+            ApplyGravity(activePlanets[j], activePlanets[j].mass,
+                         activePlanets[i], G, subDt);
+
+            // =================================================================
+            // VOLUMETRIC COLLISION DETECTION
+            // =================================================================
+            // We check if the distance between two planets is less than the sum
+            // of their radii.
+            //
+            // THE 0.8x FORGIVENESS FACTOR:
+            // For incredibly tight orbits like the Earth-Moon system (distance
+            // 0.9, combined radii 0.70), even sub-stepped numerical integration
+            // produces tiny elliptical wobbles. To prevent these micro-wobbles
+            // from triggering instant collisions, we require the planets to
+            // penetrate by 20% (threshold * 0.8f) before exploding.
+            //
+            // We use SQUARED distance and SQUARED threshold to avoid sqrt().
+            // =================================================================
+
+            float distSqr = Vector3DistanceSqr(activePlanets[i].position,
+                                               activePlanets[j].position);
+            float combinedRadii = activePlanets[i].radius + activePlanets[j].radius;
+            float collisionThreshold = combinedRadii * 0.8f;
+
+            if (distSqr < (collisionThreshold * collisionThreshold)) {
+              // ===============================================================
+              // TOMBSTONE PROTOCOL — Flag Both Planets as Dead
+              // ===============================================================
+              // Instead of calling .erase() on activePlanets (which would
+              // desynchronize the parallel planetModels array and cause
+              // index-mismatched rendering + Segfaults on Reset), we simply
+              // set isAlive = false. The rendering loop already checks this
+              // flag and skips dead planets. The physics loop (above) also
+              // skips them. The planets remain in memory at their original
+              // indices, keeping planetModels[i] perfectly aligned.
+              //
+              // This pattern is called “Tombstoning” — the entity is logically
+              // dead but physically still occupies its slot in the array,
+              // like a tombstone marking where someone used to be.
+              // ===============================================================
+              activePlanets[i].isAlive = false;
+              activePlanets[j].isAlive = false;
+
+              // ===============================================================
+              // POINTER SAFETY — Clear Selection if a Dying Planet is Selected
+              // ===============================================================
+              // If the user has one of the colliding planets selected, the
+              // slider code would try to read/write mass and radius of a dead
+              // planet. While not an immediate crash (the memory is still
+              // valid), it’s semantically wrong — you can’t adjust the mass of
+              // something that no longer exists. Clear the pointer.
+              // ===============================================================
+              if (selectedPlanet == &activePlanets[i] ||
+                  selectedPlanet == &activePlanets[j]) {
+                selectedPlanet = nullptr;
+              }
+
+              // ===============================================================
+              // SPAWN EXPLOSION — Visual Feedback at the Collision Midpoint
+              // ===============================================================
+              // Calculate the midpoint between the two colliding planets.
+              // This is where the explosion effect will appear.
+              // maxRadius = combinedRadii * 4 gives a satisfying “boom” that
+              // extends well beyond the original planets’ surfaces.
+              // ===============================================================
+              Vector3 midpoint = {
+                (activePlanets[i].position.x + activePlanets[j].position.x) / 2.0f,
+                (activePlanets[i].position.y + activePlanets[j].position.y) / 2.0f,
+                (activePlanets[i].position.z + activePlanets[j].position.z) / 2.0f
+              };
+
+              Explosion exp;
+              exp.position  = midpoint;
+              exp.radius    = combinedRadii * 0.5f;  // Start at half the collision zone
+              exp.maxRadius = combinedRadii * 3.0f;  // Expand to 3x for dramatic effect
+              exp.alpha     = 1.0f;                  // Fully opaque at spawn
+              exp.isAlive   = true;
+              activeExplosions.push_back(exp);
+            }
+          }
         }
       }
 
@@ -803,7 +966,11 @@ int main() {
       // are complete. If we updated positions inside the gravity loop, later
       // gravity calculations would use partially-updated positions, leading
       // to subtle inaccuracies.
+      // Also skip dead planets from position integration — there’s no need
+      // to move tombstoned corpses, and it prevents NaN velocities from
+      // propagating into positions.
       for (size_t i = 0; i < activePlanets.size(); i++) {
+        if (!activePlanets[i].isAlive) continue;
         UpdatePosition(activePlanets[i], dt);
       }
     }
@@ -879,6 +1046,20 @@ int main() {
 
       // WHITE prevents Raylib from multiplying the custom Blender Albedo textures
       // by a solid color, allowing the true authored textures to render.
+      //
+      // EMISSIVE SUN TRICK:
+      // The Sun sits at the point light's position, so the lighting shader
+      // produces zero illumination on it (a light can't illuminate itself).
+      // To make the Sun always fully bright (it's a star — it EMITS light),
+      // we temporarily swap its materials to the default Raylib shader we
+      // cached at setup. This shader has no lighting math, so the Sun renders
+      // at full albedo brightness. All other planets keep the lighting shader.
+      if (i == 0) {
+        for (int m = 0; m < planetModels[i].materialCount; m++) {
+          planetModels[i].materials[m].shader = defaultSunShader;
+        }
+      }
+
       DrawModelEx(
           planetModels[i],           // The 3D model from VRAM
           activePlanets[i].position, // The current physics world position
@@ -887,6 +1068,14 @@ int main() {
           modelScale,                // Dynamic scale matching the GUI slider
           WHITE                      // Use true authored textures (no color tinting)
       );
+
+      // Restore the lighting shader on the Sun after drawing so it doesn't
+      // affect future frames incorrectly if the model setup changes.
+      if (i == 0) {
+        for (int m = 0; m < planetModels[i].materialCount; m++) {
+          planetModels[i].materials[m].shader = lightShader;
+        }
+      }
     }
 
     // =========================================================================
@@ -910,6 +1099,87 @@ int main() {
           YELLOW                         // Color: bright yellow stands out
       );
     }
+
+    // =========================================================================
+    // EXPLOSION RENDERING — Additive Blended Wireframe Bursts
+    // =========================================================================
+    //
+    // WHAT IS ADDITIVE BLENDING (BLEND_ADDITIVE)?
+    // -------------------------------------------
+    // Normal rendering (alpha blending) mixes the new color with whatever is
+    // behind it: result = src*alpha + dst*(1-alpha). This makes things
+    // semi-transparent.
+    //
+    // ADDITIVE blending instead ADDS the new color on top of what’s already
+    // there: result = src + dst. This creates a glowing, light-emitting
+    // effect — perfect for explosions, fire, and energy effects. Multiple
+    // overlapping additive draws become brighter and brighter, simulating
+    // the intensity of a real explosion.
+    //
+    // We switch to additive mode, draw all active explosions, then switch
+    // back to the default alpha blend so the rest of the UI renders normally.
+    // =========================================================================
+    BeginBlendMode(BLEND_ADDITIVE);
+
+    for (size_t e = 0; e < activeExplosions.size(); e++) {
+      if (!activeExplosions[e].isAlive) continue;
+
+      // Expand the explosion radius over time. The expansion speed of 3.0f
+      // gives a dramatic burst that completes in about 2 seconds.
+      activeExplosions[e].radius += 3.0f * dt;
+
+      // Fade out the explosion’s opacity as it expands. Speed of 0.5f gives
+      // a slow, cinematic fade — visible long enough to appreciate.
+      activeExplosions[e].alpha -= 0.5f * dt;
+
+      // Kill the explosion if it’s fully faded or has reached max size.
+      if (activeExplosions[e].alpha <= 0.0f ||
+          activeExplosions[e].radius >= activeExplosions[e].maxRadius) {
+        activeExplosions[e].isAlive = false;
+        continue;
+      }
+
+      // Convert the float alpha (0.0–1.0) to an unsigned byte (0–255) for
+      // Raylib’s Color struct. We cast to unsigned char to match the type.
+      unsigned char byteAlpha = (unsigned char)(activeExplosions[e].alpha * 255.0f);
+
+      // Draw two concentric wireframe spheres with fiery colors.
+      // The outer sphere is orange, the inner is yellow — this creates a
+      // layered “fireball” look with depth.
+      Color outerColor = { 255, 161, 0, byteAlpha };   // Orange with dynamic alpha
+      Color innerColor = { 255, 255, 0, byteAlpha };   // Yellow with dynamic alpha
+
+      DrawSphereWires(activeExplosions[e].position,
+                      activeExplosions[e].radius, 8, 8, outerColor);
+      DrawSphereWires(activeExplosions[e].position,
+                      activeExplosions[e].radius * 0.6f, 8, 8, innerColor);
+    }
+
+    EndBlendMode();
+
+    // =========================================================================
+    // EXPLOSION CLEANUP — Remove Dead Explosions via Erase-Remove Idiom
+    // =========================================================================
+    //
+    // WHY IS IT SAFE TO ERASE EXPLOSIONS BUT NOT PLANETS?
+    // ---------------------------------------------------
+    // Explosions are standalone — they have NO parallel array partner. Removing
+    // activeExplosions[3] doesn’t affect any other array. Planets, however, are
+    // paired: activePlanets[i] and planetModels[i] MUST stay aligned. Erasing
+    // activePlanets[3] would make planetModels[4] render at index [3], showing
+    // the wrong model on the wrong body. This is why we use tombstoning for
+    // planets and erase-remove for explosions.
+    //
+    // THE ERASE-REMOVE IDIOM:
+    //   std::remove_if moves all “dead” elements to the END of the vector and
+    //   returns an iterator to the first dead element. Then .erase() chops off
+    //   that tail. This is O(n) and the standard C++ way to filter a vector.
+    // =========================================================================
+    activeExplosions.erase(
+      std::remove_if(activeExplosions.begin(), activeExplosions.end(),
+                     [](const Explosion& e) { return !e.isAlive; }),
+      activeExplosions.end()
+    );
 
     // End the 3D drawing mode to return to standard 2D rendering if necessary,
     // finishing the 3D perspective projection.
@@ -1030,7 +1300,14 @@ int main() {
       // STEP 3: Deep-copy all original planet data back into the active vector.
       // This restores every planet's position, velocity, mass, radius, color,
       // and name to their initial values. The simulation is now "rewound".
+      // Because initialPlanets has isAlive = true on ALL entries, this
+      // effectively "resurrects" any tombstoned (destroyed) planets.
       activePlanets = initialPlanets;
+
+      // STEP 4: Clear all active explosions so lingering fireballs don’t
+      // persist after a reset. Without this, old explosions would keep
+      // rendering over the freshly respawned planets.
+      activeExplosions.clear();
     }
 
     // =========================================================================
