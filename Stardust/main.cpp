@@ -133,11 +133,11 @@ enum EngineState { PAUSED, PLAYING, SUMMARY };
 // entirely: dead planets stay in the array, just invisible.
 // =============================================================================
 struct Explosion {
-  Vector3 position;   // Center of the explosion in world space
-  float radius;       // Current expanding radius
-  float maxRadius;    // Maximum radius before the explosion dies
-  float alpha;        // Opacity (1.0 = fully visible, 0.0 = invisible/dead)
-  bool isAlive;       // Whether this explosion is still animating
+  Vector3 position; // Center of the explosion in world space
+  float radius;     // Current expanding radius
+  float maxRadius;  // Maximum radius before the explosion dies
+  float alpha;      // Opacity (1.0 = fully visible, 0.0 = invisible/dead)
+  bool isAlive;     // Whether this explosion is still animating
 };
 std::vector<Explosion> activeExplosions;
 
@@ -169,9 +169,9 @@ int main() {
   // specific location. This means each planet is correctly lit from the Sun's
   // side — the face toward the Sun is bright, the far side is dark.
   Light sun = CreateLight(LIGHT_POINT,
-                          Vector3{0.0f, 0.0f, 0.0f},  // Position: Sun at origin
-                          Vector3Zero(),               // Target (unused for point)
-                          WHITE, lightShader);         // Color and shader
+                          Vector3{0.0f, 0.0f, 0.0f}, // Position: Sun at origin
+                          Vector3Zero(),       // Target (unused for point)
+                          WHITE, lightShader); // Color and shader
 
   // Declare a Camera3D struct instance named 'camera' to handle our 3D
   // viewpoint.
@@ -316,88 +316,91 @@ int main() {
   // ===========================================================================
   //
   // The C++ Constructor makes struct initialization cleaner by allowing us to
-  // initialize a complete struct inline inside the array, avoiding repetitive 
+  // initialize a complete struct inline inside the array, avoiding repetitive
   // 'p.mass = X; p.radius = Y;' expressions entirely.
   // ===========================================================================
 
-  // ─── STABLE WIDE-ORBIT SCATTER ───────────────────────────────────────────────
-  // G = 1.0f, M_sun = 2000.0f
-  // All orbital speeds derived from v = sqrt(G * M_sun / r) for circular orbits.
-  // Gas giant masses drastically reduced (Jupiter 50→3, Saturn 30→1.5) to prevent
-  // inner-planet slingshots. Earth inflated to 5.0 so its Hill sphere (1.88 units)
-  // safely contains the Moon at distance 0.8 (42% of Hill radius).
+  // ─── STABLE WIDE-ORBIT SCATTER
+  // ─────────────────────────────────────────────── G = 1.0f, M_sun = 2000.0f
+  // All orbital speeds derived from v = sqrt(G * M_sun / r) for circular
+  // orbits. Gas giant masses drastically reduced (Jupiter 50→3, Saturn 30→1.5)
+  // to prevent inner-planet slingshots. Earth inflated to 5.0 so its Hill
+  // sphere (1.88 units) safely contains the Moon at distance 0.8 (42% of Hill
+  // radius).
   //
   // Scatter pattern: position  = { r*cos(θ), 0, r*sin(θ) }
   //                  velocity  = { -v*sin(θ), 0, v*cos(θ) }  (tangential, CCW)
   // ─────────────────────────────────────────────────────────────────────────────
   initialPlanets = {
-    // SUN — stationary anchor at origin (mass = 2000)
-    Planet( { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },
-            2000.0f, 3.00f, "assets/sun.glb", YELLOW, 0.10f,
-            "Sun", 500.0f, 5000.0f, 1.0f, 6.0f ),
+      // SUN — stationary anchor at origin (mass = 2000)
+      Planet({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 2000.0f, 3.00f,
+             "assets/sun.glb", YELLOW, 0.10f, "Sun", 500.0f, 5000.0f, 1.0f,
+             6.0f),
 
-    // MERCURY — r=8, v=sqrt(2000/8)=15.811, θ=1.0 rad (57°)
-    Planet( {  8.0f * cosf(1.0f), 0.0f,  8.0f * sinf(1.0f) },
-            { -15.811f * sinf(1.0f), 0.0f, 15.811f * cosf(1.0f) },
-            0.055f, 0.25f, "assets/mercury.glb", GRAY, 0.02f,
-            "Mercury", 0.01f, 1.0f, 0.1f, 1.0f ),
+      // MERCURY — r=8, v=sqrt(2000/8)=15.811, θ=1.0 rad (57°)
+      Planet({8.0f * cosf(1.0f), 0.0f, 8.0f * sinf(1.0f)},
+             {-15.811f * sinf(1.0f), 0.0f, 15.811f * cosf(1.0f)}, 0.055f, 0.25f,
+             "assets/mercury.glb", GRAY, 0.02f, "Mercury", 0.01f, 1.0f, 0.1f,
+             1.0f),
 
-    // VENUS — r=14, v=sqrt(2000/14)=11.952, θ=3.0 rad (172°) | retrograde spin
-    Planet( { 14.0f * cosf(3.0f), 0.0f, 14.0f * sinf(3.0f) },
-            { -11.952f * sinf(3.0f), 0.0f, 11.952f * cosf(3.0f) },
-            0.815f, 0.50f, "assets/venus.glb", ORANGE, -0.01f,
-            "Venus", 0.1f, 5.0f, 0.1f, 2.0f ),
+      // VENUS — r=14, v=sqrt(2000/14)=11.952, θ=3.0 rad (172°) | retrograde
+      // spin
+      Planet({14.0f * cosf(3.0f), 0.0f, 14.0f * sinf(3.0f)},
+             {-11.952f * sinf(3.0f), 0.0f, 11.952f * cosf(3.0f)}, 0.815f, 0.50f,
+             "assets/venus.glb", ORANGE, -0.01f, "Venus", 0.1f, 5.0f, 0.1f,
+             2.0f),
 
-    // EARTH — r=20, v=sqrt(2000/20)=10.000, θ=5.0 rad (286°)
-    // Mass inflated to 10.0 so its Hill sphere (2.37 units) can comfortably
-    // hold the Moon at distance 0.9 (38% of Hill radius — very stable).
-    Planet( { 20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f) },
-            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) },
-            10.00f, 0.55f, "assets/earth.glb", BLUE, 0.50f,
-            "Earth", 1.0f, 20.0f, 0.2f, 3.0f ),
+      // EARTH — r=20, v=sqrt(2000/20)=10.000, θ=5.0 rad (286°)
+      // Mass inflated to 10.0 so its Hill sphere (2.37 units) can comfortably
+      // hold the Moon at distance 0.9 (38% of Hill radius — very stable).
+      Planet({20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f)},
+             {-10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f)}, 10.00f, 0.55f,
+             "assets/earth.glb", BLUE, 0.50f, "Earth", 1.0f, 20.0f, 0.2f, 3.0f),
 
-    // MARS — r=30, v=sqrt(2000/30)=8.165, θ=0.5 rad (29°)
-    Planet( { 30.0f * cosf(0.5f), 0.0f, 30.0f * sinf(0.5f) },
-            { -8.165f * sinf(0.5f), 0.0f, 8.165f * cosf(0.5f) },
-            0.107f, 0.35f, "assets/mars.glb", RED, 0.48f,
-            "Mars", 0.01f, 2.0f, 0.1f, 1.5f ),
+      // MARS — r=30, v=sqrt(2000/30)=8.165, θ=0.5 rad (29°)
+      Planet({30.0f * cosf(0.5f), 0.0f, 30.0f * sinf(0.5f)},
+             {-8.165f * sinf(0.5f), 0.0f, 8.165f * cosf(0.5f)}, 0.107f, 0.35f,
+             "assets/mars.glb", RED, 0.48f, "Mars", 0.01f, 2.0f, 0.1f, 1.5f),
 
-    // JUPITER — r=55, v=sqrt(2000/55)=6.030, θ=2.5 rad (143°)
-    // Mass reduced from 50→3 to stop gravitational slingshots on inner planets.
-    Planet( { 55.0f * cosf(2.5f), 0.0f, 55.0f * sinf(2.5f) },
-            { -6.030f * sinf(2.5f), 0.0f, 6.030f * cosf(2.5f) },
-            3.00f, 1.80f, "assets/jupiter.glb", BEIGE, 1.50f,
-            "Jupiter", 0.5f, 15.0f, 0.5f, 4.0f ),
+      // JUPITER — r=55, v=sqrt(2000/55)=6.030, θ=2.5 rad (143°)
+      // Mass reduced from 50→3 to stop gravitational slingshots on inner
+      // planets.
+      Planet({55.0f * cosf(2.5f), 0.0f, 55.0f * sinf(2.5f)},
+             {-6.030f * sinf(2.5f), 0.0f, 6.030f * cosf(2.5f)}, 3.00f, 1.80f,
+             "assets/jupiter.glb", BEIGE, 1.50f, "Jupiter", 0.5f, 15.0f, 0.5f,
+             4.0f),
 
-    // SATURN — r=80, v=sqrt(2000/80)=5.000, θ=4.5 rad (258°)
-    // Mass reduced from 30→1.5 to prevent perturbation cascades.
-    Planet( { 80.0f * cosf(4.5f), 0.0f, 80.0f * sinf(4.5f) },
-            { -5.000f * sinf(4.5f), 0.0f, 5.000f * cosf(4.5f) },
-            1.50f, 1.50f, "assets/saturn.glb", GOLD, 1.30f,
-            "Saturn", 0.2f, 10.0f, 0.5f, 3.5f ),
+      // SATURN — r=80, v=sqrt(2000/80)=5.000, θ=4.5 rad (258°)
+      // Mass reduced from 30→1.5 to prevent perturbation cascades.
+      Planet({80.0f * cosf(4.5f), 0.0f, 80.0f * sinf(4.5f)},
+             {-5.000f * sinf(4.5f), 0.0f, 5.000f * cosf(4.5f)}, 1.50f, 1.50f,
+             "assets/saturn.glb", GOLD, 1.30f, "Saturn", 0.2f, 10.0f, 0.5f,
+             3.5f),
 
-    // URANUS — r=110, v=sqrt(2000/110)=4.264, θ=1.5 rad (86°) | retrograde spin
-    Planet( { 110.0f * cosf(1.5f), 0.0f, 110.0f * sinf(1.5f) },
-            { -4.264f * sinf(1.5f), 0.0f, 4.264f * cosf(1.5f) },
-            0.50f, 1.00f, "assets/uranus.glb", SKYBLUE, -0.80f,
-            "Uranus", 0.1f, 5.0f, 0.3f, 2.5f ),
+      // URANUS — r=110, v=sqrt(2000/110)=4.264, θ=1.5 rad (86°) | retrograde
+      // spin
+      Planet({110.0f * cosf(1.5f), 0.0f, 110.0f * sinf(1.5f)},
+             {-4.264f * sinf(1.5f), 0.0f, 4.264f * cosf(1.5f)}, 0.50f, 1.00f,
+             "assets/uranus.glb", SKYBLUE, -0.80f, "Uranus", 0.1f, 5.0f, 0.3f,
+             2.5f),
 
-    // NEPTUNE — r=140, v=sqrt(2000/140)=3.780, θ=3.5 rad (201°)
-    Planet( { 140.0f * cosf(3.5f), 0.0f, 140.0f * sinf(3.5f) },
-            { -3.780f * sinf(3.5f), 0.0f, 3.780f * cosf(3.5f) },
-            0.60f, 0.95f, "assets/neptune.glb", DARKBLUE, 0.90f,
-            "Neptune", 0.1f, 5.0f, 0.3f, 2.5f ),
+      // NEPTUNE — r=140, v=sqrt(2000/140)=3.780, θ=3.5 rad (201°)
+      Planet({140.0f * cosf(3.5f), 0.0f, 140.0f * sinf(3.5f)},
+             {-3.780f * sinf(3.5f), 0.0f, 3.780f * cosf(3.5f)}, 0.60f, 0.95f,
+             "assets/neptune.glb", DARKBLUE, 0.90f, "Neptune", 0.1f, 5.0f, 0.3f,
+             2.5f),
 
-    // MOON — orbits Earth at distance 0.9 (38% of Earth's Hill sphere = 2.37)
-    // Position = Earth position + {0.9, 0, 0}
-    // Velocity = Earth velocity + {0, 0, 3.333}  where 3.333 = sqrt(G * M_earth / r)
-    //          = sqrt(10.0 / 0.9) = sqrt(11.11) = 3.333
-    // At 38% of the Hill sphere, this is deep in the stable zone for Euler
-    // integration. Clearance above combined radii (0.70) is 0.20 units.
-    Planet( { 20.0f * cosf(5.0f) + 0.9f, 0.0f, 20.0f * sinf(5.0f) },
-            { -10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 3.333f },
-            0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f,
-            "Moon", 0.001f, 0.5f, 0.05f, 0.5f ),
+      // MOON — orbits Earth at distance 0.9 (38% of Earth's Hill sphere = 2.37)
+      // Position = Earth position + {0.9, 0, 0}
+      // Velocity = Earth velocity + {0, 0, 3.333}  where 3.333 = sqrt(G *
+      // M_earth / r)
+      //          = sqrt(10.0 / 0.9) = sqrt(11.11) = 3.333
+      // At 38% of the Hill sphere, this is deep in the stable zone for Euler
+      // integration. Clearance above combined radii (0.70) is 0.20 units.
+      Planet({20.0f * cosf(5.0f) + 0.9f, 0.0f, 20.0f * sinf(5.0f)},
+             {-10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 3.333f},
+             0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f, "Moon", 0.001f,
+             0.5f, 0.05f, 0.5f),
   };
 
   // ===========================================================================
@@ -409,25 +412,25 @@ int main() {
   // ===========================================================================
   Vector3 totalMomentum = {0.0f, 0.0f, 0.0f};
   for (size_t i = 1; i < initialPlanets.size(); i++) {
-      totalMomentum.x += initialPlanets[i].mass * initialPlanets[i].velocity.x;
-      totalMomentum.y += initialPlanets[i].mass * initialPlanets[i].velocity.y;
-      totalMomentum.z += initialPlanets[i].mass * initialPlanets[i].velocity.z;
+    totalMomentum.x += initialPlanets[i].mass * initialPlanets[i].velocity.x;
+    totalMomentum.y += initialPlanets[i].mass * initialPlanets[i].velocity.y;
+    totalMomentum.z += initialPlanets[i].mass * initialPlanets[i].velocity.z;
   }
-  
+
   // Apply counter-velocity to the Sun (index 0)
   initialPlanets[0].velocity.x = -totalMomentum.x / initialPlanets[0].mass;
   initialPlanets[0].velocity.y = -totalMomentum.y / initialPlanets[0].mass;
   initialPlanets[0].velocity.z = -totalMomentum.z / initialPlanets[0].mass;
 
-  // Locate the existing LoadModel() calls in main.cpp and replace them entirely with a loop 
-  // over initialPlanets, loading p.modelPath in order.
+  // Locate the existing LoadModel() calls in main.cpp and replace them entirely
+  // with a loop over initialPlanets, loading p.modelPath in order.
   for (size_t i = 0; i < initialPlanets.size(); i++) {
-      planetModels.push_back(LoadModel(initialPlanets[i].modelPath.c_str()));
+    planetModels.push_back(LoadModel(initialPlanets[i].modelPath.c_str()));
   }
 
-  // Cache the default, unlit shader that Raylib automatically assigns to the Sun
-  // model when it's loaded. We need this so the Sun can emit its own light and
-  // not be incorrectly shaded by the point light at its center.
+  // Cache the default, unlit shader that Raylib automatically assigns to the
+  // Sun model when it's loaded. We need this so the Sun can emit its own light
+  // and not be incorrectly shaded by the point light at its center.
   Shader defaultSunShader = planetModels[0].materials[0].shader;
 
   // Apply the lighting shader to ALL materials on ALL loaded models so they
@@ -540,6 +543,36 @@ int main() {
   // more responsive fly-through experience.
   // ===========================================================================
   float cameraSpeed = 2.0f;
+  // JOYSTICK STATE — must persist across frames, so declared outside the loop.
+  // The joystick is inactive until the user touches inside its base circle.
+  bool joystickActive = false;
+  Vector2 joystickCenter = {0.0f, 0.0f}; // Fixed base position (set each frame)
+  Vector2 joystickThumb = {0.0f,
+                           0.0f}; // Current thumb position (follows touch)
+
+  // Tracks WHICH planet was selected last frame so the toast only fires
+  // when the user drags a slider, not when they first tap a planet.
+  Planet* prevSelectedPlanet = nullptr;
+
+  // =========================================================================
+  // TOAST NOTIFICATION STATE — Real-World Value Display
+  // =========================================================================
+  // When the user drags the mass or radius slider, a notification appears at
+  // the top-center of the screen showing the real-world equivalent value.
+  //
+  // prevSliderMass / prevSliderRadius: store the last known slider values so
+  // we can detect when the user actually moved a slider this frame.
+  //
+  // toastTimer: counts DOWN from 3.0 seconds to 0. While > 0, the toast is
+  // visible. The last 0.5 seconds fade out by scaling the alpha channel.
+  //
+  // toastText: the formatted string built whenever a slider changes, e.g.:
+  //   "Earth | Mass: 1.00 Earth masses  (5.97e+24 kg)"
+  // =========================================================================
+  float toastTimer        = 0.0f;
+  char  toastText[192]    = {0};
+  float prevSliderMass    = -1.0f;  // -1 = "no planet was selected last frame"
+  float prevSliderRadius  = -1.0f;
 
   // ===========================================================================
   // GRAVITATIONAL CONSTANT — Shared by all gravity calculations
@@ -633,35 +666,47 @@ int main() {
       UpdateCamera(&camera, CAMERA_FREE);
 
       // Calculate normalized direction vectors from camera orientation
-      Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+      Vector3 forward =
+          Vector3Normalize(Vector3Subtract(camera.target, camera.position));
       Vector3 right = Vector3Normalize(Vector3CrossProduct(forward, camera.up));
 
       float moveAmount = cameraSpeed * dt;
 
-      // Manual WASD movement at our custom speed (layered on top of UpdateCamera)
+      // Manual WASD movement at our custom speed (layered on top of
+      // UpdateCamera)
       if (IsKeyDown(KEY_W)) {
-        camera.position = Vector3Add(camera.position, Vector3Scale(forward, moveAmount));
-        camera.target   = Vector3Add(camera.target,   Vector3Scale(forward, moveAmount));
+        camera.position =
+            Vector3Add(camera.position, Vector3Scale(forward, moveAmount));
+        camera.target =
+            Vector3Add(camera.target, Vector3Scale(forward, moveAmount));
       }
       if (IsKeyDown(KEY_S)) {
-        camera.position = Vector3Subtract(camera.position, Vector3Scale(forward, moveAmount));
-        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(forward, moveAmount));
+        camera.position =
+            Vector3Subtract(camera.position, Vector3Scale(forward, moveAmount));
+        camera.target =
+            Vector3Subtract(camera.target, Vector3Scale(forward, moveAmount));
       }
       if (IsKeyDown(KEY_D)) {
-        camera.position = Vector3Add(camera.position, Vector3Scale(right, moveAmount));
-        camera.target   = Vector3Add(camera.target,   Vector3Scale(right, moveAmount));
+        camera.position =
+            Vector3Add(camera.position, Vector3Scale(right, moveAmount));
+        camera.target =
+            Vector3Add(camera.target, Vector3Scale(right, moveAmount));
       }
       if (IsKeyDown(KEY_A)) {
-        camera.position = Vector3Subtract(camera.position, Vector3Scale(right, moveAmount));
-        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(right, moveAmount));
+        camera.position =
+            Vector3Subtract(camera.position, Vector3Scale(right, moveAmount));
+        camera.target =
+            Vector3Subtract(camera.target, Vector3Scale(right, moveAmount));
       }
 
       // Scroll wheel adjusts camera speed. Clamp between 0.5 and 50.0.
       float wheel = GetMouseWheelMove();
       if (wheel != 0.0f) {
         cameraSpeed += wheel * 1.0f;
-        if (cameraSpeed < 0.5f) cameraSpeed = 0.5f;
-        if (cameraSpeed > 50.0f) cameraSpeed = 50.0f;
+        if (cameraSpeed < 0.5f)
+          cameraSpeed = 0.5f;
+        if (cameraSpeed > 50.0f)
+          cameraSpeed = 50.0f;
       }
     } else {
       // User is NOT holding Right Mouse Button.
@@ -747,7 +792,7 @@ int main() {
     //      vector (see the reset button section)
     // =========================================================================
     if (!isCameraActive && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-        GetMouseY() > 120) {
+        GetMouseY() > 120 && GetMouseY() < (screenHeight - 280)) {
       // GUARD: 'GetMouseY() > 120' prevents clicks on the GUI area (top 120
       // pixels) from triggering mouse picking. Without this, clicking a slider
       // or the reset button would fire a ray into 3D space, miss all planets,
@@ -870,7 +915,8 @@ int main() {
             // gravitational forces, and distance calculations on overlapping
             // corpses could produce NaN/Inf values that corrupt the simulation.
             // =================================================================
-            if (!activePlanets[i].isAlive || !activePlanets[j].isAlive) continue;
+            if (!activePlanets[i].isAlive || !activePlanets[j].isAlive)
+              continue;
 
             // Planet i pulls planet j toward it.
             ApplyGravity(activePlanets[i], activePlanets[i].mass,
@@ -897,7 +943,8 @@ int main() {
 
             float distSqr = Vector3DistanceSqr(activePlanets[i].position,
                                                activePlanets[j].position);
-            float combinedRadii = activePlanets[i].radius + activePlanets[j].radius;
+            float combinedRadii =
+                activePlanets[i].radius + activePlanets[j].radius;
             float collisionThreshold = combinedRadii * 0.8f;
 
             if (distSqr < (collisionThreshold * collisionThreshold)) {
@@ -942,17 +989,21 @@ int main() {
               // extends well beyond the original planets’ surfaces.
               // ===============================================================
               Vector3 midpoint = {
-                (activePlanets[i].position.x + activePlanets[j].position.x) / 2.0f,
-                (activePlanets[i].position.y + activePlanets[j].position.y) / 2.0f,
-                (activePlanets[i].position.z + activePlanets[j].position.z) / 2.0f
-              };
+                  (activePlanets[i].position.x + activePlanets[j].position.x) /
+                      2.0f,
+                  (activePlanets[i].position.y + activePlanets[j].position.y) /
+                      2.0f,
+                  (activePlanets[i].position.z + activePlanets[j].position.z) /
+                      2.0f};
 
               Explosion exp;
-              exp.position  = midpoint;
-              exp.radius    = combinedRadii * 0.5f;  // Start at half the collision zone
-              exp.maxRadius = combinedRadii * 3.0f;  // Expand to 3x for dramatic effect
-              exp.alpha     = 1.0f;                  // Fully opaque at spawn
-              exp.isAlive   = true;
+              exp.position = midpoint;
+              exp.radius =
+                  combinedRadii * 0.5f; // Start at half the collision zone
+              exp.maxRadius =
+                  combinedRadii * 3.0f; // Expand to 3x for dramatic effect
+              exp.alpha = 1.0f;         // Fully opaque at spawn
+              exp.isAlive = true;
               activeExplosions.push_back(exp);
             }
           }
@@ -970,7 +1021,8 @@ int main() {
       // to move tombstoned corpses, and it prevents NaN velocities from
       // propagating into positions.
       for (size_t i = 0; i < activePlanets.size(); i++) {
-        if (!activePlanets[i].isAlive) continue;
+        if (!activePlanets[i].isAlive)
+          continue;
         UpdatePosition(activePlanets[i], dt);
       }
     }
@@ -1019,8 +1071,9 @@ int main() {
     // slider! The physics bounding sphere perfectly overlays the visual mesh.
     // =========================================================================
     for (size_t i = 0; i < activePlanets.size(); i++) {
-      if (!activePlanets[i].isAlive) continue; // Skip rendering destroyed planets
-      
+      if (!activePlanets[i].isAlive)
+        continue; // Skip rendering destroyed planets
+
       const float visualScaleFactor = 1.0f;
       // THE HOLY GRAIL OF PHYSICS ENGINES (1:1 Scale Normalization):
       // ------------------------------------------------------------
@@ -1035,17 +1088,20 @@ int main() {
                             activePlanets[i].radius * visualScaleFactor};
 
       // EXPLANATION: Why RAD2DEG is required for Raylib's rotation functions.
-      // Raylib's mathematical functions (like sin, cos in shaders) often work internally
-      // with radians, but the high-level DrawModelEx function expects rotation angles 
-      // in DEGREES. Since rotationSpeed is typically defined in radians per second 
-      // (a standard physics unit), we multiply by RAD2DEG to convert it to degrees 
-      // before feeding it into the drawing function.
+      // Raylib's mathematical functions (like sin, cos in shaders) often work
+      // internally with radians, but the high-level DrawModelEx function
+      // expects rotation angles in DEGREES. Since rotationSpeed is typically
+      // defined in radians per second (a standard physics unit), we multiply by
+      // RAD2DEG to convert it to degrees before feeding it into the drawing
+      // function.
       if (currentState == PLAYING) {
-          activePlanets[i].rotationAngle += activePlanets[i].rotationSpeed * dt * RAD2DEG;
+        activePlanets[i].rotationAngle +=
+            activePlanets[i].rotationSpeed * dt * RAD2DEG;
       }
 
-      // WHITE prevents Raylib from multiplying the custom Blender Albedo textures
-      // by a solid color, allowing the true authored textures to render.
+      // WHITE prevents Raylib from multiplying the custom Blender Albedo
+      // textures by a solid color, allowing the true authored textures to
+      // render.
       //
       // EMISSIVE SUN TRICK:
       // The Sun sits at the point light's position, so the lighting shader
@@ -1061,12 +1117,12 @@ int main() {
       }
 
       DrawModelEx(
-          planetModels[i],           // The 3D model from VRAM
-          activePlanets[i].position, // The current physics world position
-          Vector3{0.0f, 1.0f, 0.0f}, // Rotate around Y-axis (up)
+          planetModels[i],                // The 3D model from VRAM
+          activePlanets[i].position,      // The current physics world position
+          Vector3{0.0f, 1.0f, 0.0f},      // Rotate around Y-axis (up)
           activePlanets[i].rotationAngle, // Factor in dynamic rotation angle
-          modelScale,                // Dynamic scale matching the GUI slider
-          WHITE                      // Use true authored textures (no color tinting)
+          modelScale, // Dynamic scale matching the GUI slider
+          WHITE       // Use true authored textures (no color tinting)
       );
 
       // Restore the lighting shader on the Sun after drawing so it doesn't
@@ -1122,7 +1178,8 @@ int main() {
     BeginBlendMode(BLEND_ADDITIVE);
 
     for (size_t e = 0; e < activeExplosions.size(); e++) {
-      if (!activeExplosions[e].isAlive) continue;
+      if (!activeExplosions[e].isAlive)
+        continue;
 
       // Expand the explosion radius over time. The expansion speed of 3.0f
       // gives a dramatic burst that completes in about 2 seconds.
@@ -1141,16 +1198,17 @@ int main() {
 
       // Convert the float alpha (0.0–1.0) to an unsigned byte (0–255) for
       // Raylib’s Color struct. We cast to unsigned char to match the type.
-      unsigned char byteAlpha = (unsigned char)(activeExplosions[e].alpha * 255.0f);
+      unsigned char byteAlpha =
+          (unsigned char)(activeExplosions[e].alpha * 255.0f);
 
       // Draw two concentric wireframe spheres with fiery colors.
       // The outer sphere is orange, the inner is yellow — this creates a
       // layered “fireball” look with depth.
-      Color outerColor = { 255, 161, 0, byteAlpha };   // Orange with dynamic alpha
-      Color innerColor = { 255, 255, 0, byteAlpha };   // Yellow with dynamic alpha
+      Color outerColor = {255, 161, 0, byteAlpha}; // Orange with dynamic alpha
+      Color innerColor = {255, 255, 0, byteAlpha}; // Yellow with dynamic alpha
 
-      DrawSphereWires(activeExplosions[e].position,
-                      activeExplosions[e].radius, 8, 8, outerColor);
+      DrawSphereWires(activeExplosions[e].position, activeExplosions[e].radius,
+                      8, 8, outerColor);
       DrawSphereWires(activeExplosions[e].position,
                       activeExplosions[e].radius * 0.6f, 8, 8, innerColor);
     }
@@ -1176,188 +1234,411 @@ int main() {
     //   that tail. This is O(n) and the standard C++ way to filter a vector.
     // =========================================================================
     activeExplosions.erase(
-      std::remove_if(activeExplosions.begin(), activeExplosions.end(),
-                     [](const Explosion& e) { return !e.isAlive; }),
-      activeExplosions.end()
-    );
+        std::remove_if(activeExplosions.begin(), activeExplosions.end(),
+                       [](const Explosion &e) { return !e.isAlive; }),
+        activeExplosions.end());
 
     // End the 3D drawing mode to return to standard 2D rendering if necessary,
     // finishing the 3D perspective projection.
     EndMode3D();
 
     // --- 2D UI RENDERING ---
-    // UI text and controls MUST be drawn outside of the 3D camera mode (i.e.,
-    // after EndMode3D()). This is because the UI needs to be drawn in 2D screen
-    // space (pixels mapping directly to the window) rather than 3D world space.
-    // If we drew the UI inside Mode3D, it would be affected by the camera's
-    // perspective, position, and rotation, causing it to render as an object
-    // scattered in the 3D environment. Drawing it here overlays the 2D elements
-    // seamlessly on top of our 3D world.
+    // All 2D elements drawn after EndMode3D() so they overlay the 3D world
+    // in flat screen-space, unaffected by the 3D camera matrix.
 
     // =========================================================================
-    // FEATURE 4: DYNAMIC GUI SLIDERS — Bound to the Selected Planet
+    // LEFT INSTRUMENT PANEL — Planet Controls
+    // =========================================================================
+    // A single rounded dark panel groups the planet name, mass/radius sliders,
+    // and reset button into one coherent instrument cluster. This prevents
+    // controls from looking scattered and gives touch users a clear hit zone.
+    //
+    // Layout (all Y positions relative to panel top-left):
+    //   Row 1 (y+12):  Planet name  /  "Tap a planet" hint
+    //   Separator
+    //   Row 2 (y+46):  Mass slider
+    //   Row 3 (y+84):  Radius slider
+    //   Row 4 (y+122): RESET SIMULATION button
+    // =========================================================================
+    {
+      const float PNL_X  = 10.0f;
+      const float PNL_Y  = 10.0f;
+      const float PNL_W  = 340.0f;
+      const float PNL_H  = 162.0f;
+      const float PAD    = 12.0f;
+      const float SLD_X  = PNL_X + 84.0f;          // Left edge of slider bars
+      const float SLD_W  = PNL_W - 84.0f - PAD - 52.0f; // Bar width; 52px for value text
+      const float ROW_H  = 30.0f;
+
+      // Dark panel background + thin border
+      DrawRectangleRounded(
+          Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H},
+          0.06f, 8, Color{5, 5, 15, 175});
+      DrawRectangleRoundedLinesEx(
+          Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H},
+          0.06f, 8, 1.5f, Color{55, 55, 85, 210});
+
+      // --- Row 1: Planet name header ---
+      float r1Y = PNL_Y + PAD;
+      if (selectedPlanet != nullptr) {
+        DrawText(selectedPlanet->name.c_str(),
+                 (int)(PNL_X + PAD), (int)r1Y, 20, YELLOW);
+        DrawText("SELECTED",
+                 (int)(PNL_X + PNL_W - 88.0f), (int)(r1Y + 4), 11,
+                 Color{200, 200, 70, 150});
+      } else {
+        DrawText("Tap a planet to select",
+                 (int)(PNL_X + PAD), (int)r1Y, 16,
+                 Color{100, 100, 100, 200});
+      }
+
+      // Separator line between name and sliders
+      DrawLineEx(
+          Vector2{PNL_X + PAD,           r1Y + 26.0f},
+          Vector2{PNL_X + PNL_W - PAD,   r1Y + 26.0f},
+          1.0f, Color{55, 55, 80, 180});
+
+      // --- Row 2: Mass slider ---
+      float r2Y = r1Y + 34.0f;
+      if (selectedPlanet != nullptr) {
+        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H},
+                  "Mass",
+                  TextFormat("%.2f", selectedPlanet->mass),
+                  &selectedPlanet->mass,
+                  selectedPlanet->massMin, selectedPlanet->massMax);
+      } else {
+        // Draw as visually disabled so the user knows it's inactive
+        GuiSetState(STATE_DISABLED);
+        float dummy = 0.5f;
+        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H}, "Mass", "--",
+                  &dummy, 0.0f, 1.0f);
+        GuiSetState(STATE_NORMAL);
+      }
+
+      // --- Row 3: Radius slider ---
+      float r3Y = r2Y + ROW_H + 8.0f;
+      if (selectedPlanet != nullptr) {
+        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H},
+                  "Radius",
+                  TextFormat("%.2f", selectedPlanet->radius),
+                  &selectedPlanet->radius,
+                  selectedPlanet->radiusMin, selectedPlanet->radiusMax);
+      } else {
+        GuiSetState(STATE_DISABLED);
+        float dummy = 0.5f;
+        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H}, "Radius", "--",
+                  &dummy, 0.0f, 1.0f);
+        GuiSetState(STATE_NORMAL);
+      }
+
+      // --- Row 4: Reset button (full panel width minus padding) ---
+      float r4Y = r3Y + ROW_H + 8.0f;
+      if (GuiButton(Rectangle{PNL_X + PAD, r4Y, PNL_W - PAD * 2.0f, ROW_H},
+                    "RESET SIMULATION")) {
+        // Clear pointer FIRST before touching the vector (dangling-pointer safety)
+        selectedPlanet     = nullptr;
+        prevSelectedPlanet = nullptr;
+        prevSliderMass     = -1.0f;
+        prevSliderRadius   = -1.0f;
+        toastTimer         = 0.0f;
+        currentState       = PAUSED;
+        activePlanets      = initialPlanets;
+        activeExplosions.clear();
+      }
+    }
+
+    // =========================================================================
+    // RIGHT STATUS PANEL — Simulation State + Camera Speed
+    // =========================================================================
+    // Mirrors the left panel's visual language: same dark background, same
+    // border style. Contains the PLAYING/PAUSED indicator and the camera speed
+    // slider so the user can adjust navigation speed without a keyboard.
+    // =========================================================================
+    {
+      const float RP_W = 320.0f;
+      const float RP_X = (float)screenWidth - RP_W - 10.0f;
+      const float RP_Y = 10.0f;
+      const float RP_H = 90.0f;
+
+      DrawRectangleRounded(
+          Rectangle{RP_X, RP_Y, RP_W, RP_H},
+          0.06f, 8, Color{5, 5, 15, 175});
+      DrawRectangleRoundedLinesEx(
+          Rectangle{RP_X, RP_Y, RP_W, RP_H},
+          0.06f, 8, 1.5f, Color{55, 55, 85, 210});
+
+      // Coloured status dot + label
+      bool isPlaying = (currentState == PLAYING);
+      DrawCircleV(Vector2{RP_X + 20.0f, RP_Y + 22.0f}, 7.0f,
+                  isPlaying ? Color{60, 220, 80, 255} : Color{220, 60, 60, 255});
+      DrawText(isPlaying ? "PLAYING" : "PAUSED",
+               (int)(RP_X + 34.0f), (int)(RP_Y + 13.0f), 20,
+               isPlaying ? GREEN : RED);
+
+      // Separator
+      DrawLineEx(
+          Vector2{RP_X + 12.0f,       RP_Y + 44.0f},
+          Vector2{RP_X + RP_W - 12.0f, RP_Y + 44.0f},
+          1.0f, Color{55, 55, 80, 180});
+
+      // Camera speed slider — "Cam Spd" label renders left of the bounds rect,
+      // so we push the slider right enough to keep the label inside the panel.
+      GuiSlider(
+          Rectangle{RP_X + 88.0f, RP_Y + 52.0f, RP_W - 102.0f, 28.0f},
+          "Cam Spd",
+          TextFormat("%.1f", cameraSpeed),
+          &cameraSpeed,
+          0.5f, 50.0f);
+    }
+
+    // =========================================================================
+    // TOAST TRIGGER — Real-world value (fires on DRAG only, not on selection)
     // =========================================================================
     //
-    // HOW '&selectedPlanet->mass' WORKS (THE KEY CONCEPT):
-    // -----------------------------------------------------
-    // This expression combines THREE C++ concepts in one line:
+    // ROOT CAUSE OF THE OLD BUG:
+    //   prevSliderMass was reset to -1.0f on deselection. The moment ANY planet
+    //   was tapped, the condition (-1 != planet.mass) fired immediately — showing
+    //   a toast before the user had moved anything. This felt like a system error
+    //   notification, not a helpful feedback.
     //
-    //   &selectedPlanet->mass
-    //   ^       ^        ^
-    //   |       |        +-- 'mass': the float member inside the Planet struct
-    //   |       +----------- '->': the arrow operator (access a member through
-    //   |                         a pointer). Same as (*selectedPlanet).mass
-    //   +------------------- '&': the address-of operator (get the memory
-    //                             address of the result)
-    //
-    // Now that selectedPlanet points into the activePlanets vector, this
-    // expression reaches directly into the vector's memory and gives GuiSlider
-    // the address of that specific planet's mass field. Dragging the slider
-    // modifies the planet's actual mass DIRECTLY in the vector's memory.
-    //
-    // THE POWER OF THIS PATTERN ("DATA BINDING"):
-    //   - Click Earth → sliders control activePlanets[0].mass/radius
-    //   - Click Moon  → sliders control activePlanets[1].mass/radius
-    //   - Click Mars (future) → sliders control activePlanets[2].mass/radius
-    //   All with the SAME two sliders! The pointer acts as a switch.
+    // FIX — SELECTION CHANGE GUARD:
+    //   We now track prevSelectedPlanet (a Planet pointer). When the pointer
+    //   changes (new planet selected), we silently SYNC prevSliderMass and
+    //   prevSliderRadius to the NEW planet's current values. The next comparison
+    //   will be (newValue == newValue) → false → no toast. Toast only fires when
+    //   a value changes WHILE the same planet remains selected = user dragged.
     // =========================================================================
     if (selectedPlanet != nullptr) {
-      // --- MASS SLIDER ---
-      // Uses per-planet massMin/massMax for safe ranges.
-      GuiSlider(Rectangle{20, 10, 240, 30},
-                "Mass",
-                TextFormat("%.2f", selectedPlanet->mass),
-                &selectedPlanet->mass,
-                selectedPlanet->massMin,
-                selectedPlanet->massMax
-      );
 
-      // --- RADIUS SLIDER ---
-      // Uses per-planet radiusMin/radiusMax for safe ranges.
-      GuiSlider(Rectangle{20, 50, 240, 30},
-                "Radius",
-                TextFormat("%.2f", selectedPlanet->radius),
-                &selectedPlanet->radius,
-                selectedPlanet->radiusMin,
-                selectedPlanet->radiusMax
-      );
+      // Silent sync on new selection — no toast triggered here
+      if (selectedPlanet != prevSelectedPlanet) {
+        prevSelectedPlanet = selectedPlanet;
+        prevSliderMass     = selectedPlanet->mass;
+        prevSliderRadius   = selectedPlanet->radius;
+        // Do NOT set toastTimer here — silence on selection is intentional.
+      }
+
+      // -----------------------------------------------------------------------
+      // Conversion anchors derived from the planet initialisation data:
+      //   Sim Earth mass   = 10.0  →  real 5.972e24 kg
+      //   Sim Earth radius = 0.55  →  real 6,371 km
+      // All other bodies scale linearly from these two anchors.
+      // -----------------------------------------------------------------------
+
+      if (prevSliderMass != selectedPlanet->mass) {
+        prevSliderMass = selectedPlanet->mass;
+        toastTimer     = 3.0f;
+
+        // Convert sim mass → real-world kg using Earth as the anchor.
+        // Sim Earth mass = 10.0 → real Earth mass = 5.972e24 kg
+        // earthRatio = how many times heavier/lighter than Earth this body is.
+        const double SIM_EARTH_MASS    = 10.0;
+        const double REAL_EARTH_MASS   = 5.972e24; // kg
+
+        double earthRatio = (double)selectedPlanet->mass / SIM_EARTH_MASS;
+        double realKg     = earthRatio * REAL_EARTH_MASS;
+
+        // Display: "PlanetName  |  X.XXe+YY kg  |  Z.Zx Earth mass"
+        // earthRatio IS the multiplier — no further division needed.
+        // If < 1 we still show the decimal (e.g. 0.15x Earth) because that's
+        // accurate and the kg value already gives the user the intuition.
+        snprintf(toastText, sizeof(toastText),
+                 "%s  |  %.3e kg  |  %.3gx Earth mass",
+                 selectedPlanet->name.c_str(), realKg, earthRatio);
+      }
+
+      if (prevSliderRadius != selectedPlanet->radius) {
+        prevSliderRadius = selectedPlanet->radius;
+        toastTimer       = 3.0f;
+
+        // Convert sim radius → real-world km using Earth as the anchor.
+        // Sim Earth radius = 0.55 → real Earth radius = 6,371 km
+        // earthRadiusRatio = how many times larger/smaller than Earth this body is.
+        const double SIM_EARTH_RADIUS  = 0.55;
+        const double REAL_EARTH_RADIUS = 6371.0; // km
+
+        double earthRadiusRatio = (double)selectedPlanet->radius / SIM_EARTH_RADIUS;
+        double realKm           = earthRadiusRatio * REAL_EARTH_RADIUS;
+
+        // Display: "PlanetName  |  XXXXX km  |  Z.Zx Earth radius"
+        snprintf(toastText, sizeof(toastText),
+                 "%s  |  %.0f km  |  %.3gx Earth radius",
+                 selectedPlanet->name.c_str(), realKm, earthRadiusRatio);
+      }
+
+    } else {
+      // Planet deselected — reset all tracking for a clean slate next selection
+      prevSelectedPlanet = nullptr;
+      prevSliderMass     = -1.0f;
+      prevSliderRadius   = -1.0f;
     }
 
     // =========================================================================
-    // FEATURE 8: RESET BUTTON — Restore Initial Planet Configuration
+    // TOAST DRAW — Centered, fades out in the last 0.5 seconds
     // =========================================================================
-    //
-    // GuiButton(Rectangle bounds, const char* text):
-    //   A raygui function that draws a clickable button at the specified
-    //   position. It returns 'true' (non-zero) for exactly ONE frame when the
-    //   button is clicked.
-    //
-    // CRITICAL: THE ORDER OF RESET OPERATIONS
-    // ----------------------------------------
-    // When the user clicks RESET, we must execute these steps in a SPECIFIC
-    // ORDER to prevent dangling pointers and undefined behavior:
-    //
-    //   1. selectedPlanet = nullptr;       ← MUST BE FIRST!
-    //   2. currentState = PAUSED;
-    //   3. activePlanets = initialPlanets;  ← MUST BE LAST!
-    //
-    // WHY THIS ORDER MATTERS:
-    //   'selectedPlanet' currently holds a memory address pointing INTO the
-    //   activePlanets vector's internal memory (e.g., &activePlanets[0]).
-    //
-    //   When we execute 'activePlanets = initialPlanets', the vector's '='
-    //   operator may reallocate its internal memory block to fit the new data.
-    //   If reallocation occurs:
-    //     1. A NEW memory block is allocated
-    //     2. All elements are copied to the new block
-    //     3. The OLD memory block is FREED (deallocated)
-    //
-    //   If selectedPlanet still pointed to the old block, it would become a
-    //   DANGLING POINTER — pointing at freed memory. The NEXT time we try to
-    //   read selectedPlanet->mass (e.g., in the slider code), we'd be reading
-    //   garbage data or crashing the program.
-    //
-    //   By setting selectedPlanet = nullptr FIRST, we guarantee that no
-    //   pointer exists to the old memory when the vector copy happens. After
-    //   the copy, the user must click a planet again to set a new, valid
-    //   pointer into the fresh activePlanets vector.
-    //
-    // NOTE ON OUR SPECIFIC CASE:
-    //   Because we reserved(8) and both vectors have the same number of
-    //   elements, reallocation is unlikely in practice. But writing code that
-    //   is CORRECT BY CONSTRUCTION (not by luck) is a core engineering
-    //   principle. This order is safe regardless of vector implementation
-    //   details.
+    // Positioned at y=175 so it sits below both panels and never overlaps them.
+    // A rounded pill background improves legibility over the 3D scene.
     // =========================================================================
-    if (GuiButton(Rectangle{20, 90, 240, 30}, "RESET")) {
-      // STEP 1: Nullify the pointer BEFORE touching the vector.
-      // This prevents any dangling pointer issues during the vector copy.
-      selectedPlanet = nullptr;
+    if (toastTimer > 0.0f) {
+      toastTimer -= dt;
+      if (toastTimer < 0.0f) toastTimer = 0.0f;
 
-      // STEP 2: Pause the simulation so the user can observe the reset state.
-      currentState = PAUSED;
+      // Alpha: full for first 2.5s, fades to 0 over the final 0.5s
+      unsigned char alpha = 255;
+      if (toastTimer < 0.5f)
+        alpha = (unsigned char)((toastTimer / 0.5f) * 255.0f);
 
-      // STEP 3: Deep-copy all original planet data back into the active vector.
-      // This restores every planet's position, velocity, mass, radius, color,
-      // and name to their initial values. The simulation is now "rewound".
-      // Because initialPlanets has isAlive = true on ALL entries, this
-      // effectively "resurrects" any tombstoned (destroyed) planets.
-      activePlanets = initialPlanets;
+      const int FS = 20;
+      int tw = MeasureText(toastText, FS);
+      int tx = screenWidth / 2 - tw / 2;
+      int ty = 175; // below both top panels
 
-      // STEP 4: Clear all active explosions so lingering fireballs don’t
-      // persist after a reset. Without this, old explosions would keep
-      // rendering over the freshly respawned planets.
-      activeExplosions.clear();
+      DrawRectangleRounded(
+          Rectangle{(float)(tx - 20), (float)(ty - 9), (float)(tw + 40), (float)(FS + 20)},
+          0.45f, 8,
+          Color{0, 0, 0, (unsigned char)(alpha * 0.65f)});
+
+      DrawText(toastText, tx, ty, FS, Color{255, 228, 110, alpha});
     }
 
     // =========================================================================
-    // FEATURE 1 (continued): HUD — Display the current engine state on screen
+    // BOTTOM CONTROL HINT
     // =========================================================================
-    //
-    // DrawText(const char* text, int posX, int posY, int fontSize, Color
-    // color):
-    //   A Raylib function that draws a string of text on the screen at the
-    //   given (x, y) pixel position with the specified font size and color.
-    //   This is 2D rendering, so it appears as a flat overlay on top of the
-    //   3D scene.
-    //
-    // THE TERNARY OPERATOR (condition ? valueIfTrue : valueIfFalse):
-    //   This is a compact one-line 'if/else'. It evaluates the condition:
-    //   - If TRUE, it returns the value after '?'
-    //   - If FALSE, it returns the value after ':'
-    // =========================================================================
-    DrawText((currentState == PLAYING) ? "[ PLAYING ]" : "[ PAUSED ]",
-             screenWidth - 200, // X position: 200 pixels from the right edge
-             20,                // Y position: 20 pixels from the top
-             20,                // Font size in pixels
-             (currentState == PLAYING)
-                 ? GREEN
-                 : RED // Green when playing, red when paused
-    );
-
-    // Display helpful hints for the user at the bottom of the screen so they
-    // know how to use the controls.
-    DrawText("SPACE: Play/Pause | RMB+WASD: Camera | Scroll: Speed | LMB: Select",
-             10, screenHeight - 30, 16, DARKGRAY);
-
-    // Display camera speed so the user knows their current navigation speed.
-    DrawText(TextFormat("Cam Speed: %.1f", cameraSpeed),
-             screenWidth - 200, 80, 16, GRAY);
+    DrawText(
+        "SPACE: Play/Pause  |  Hold RMB + WASD: Free Camera  |  LMB: Select Planet",
+        10, screenHeight - 26, 14, Color{90, 90, 90, 200});
 
     // =========================================================================
-    // FEATURE 2 (continued): HUD — Display selected planet info
+    // MOBILE UI NAVIGATION — D-Pad + Virtual Joystick
     // =========================================================================
-    // Uses the short 'name' field (e.g., "Earth") instead of modelPath.
-    // Positioned at screenWidth - 300 to avoid text clipping off the window.
-    // =========================================================================
-    if (selectedPlanet != nullptr) {
-      DrawText(TextFormat("Selected: %s", selectedPlanet->name.c_str()),
-               screenWidth - 300, // X position: 300px from right edge (wider margin)
-               50,                // Y position: below the state indicator
-               20,                // Font size
-               YELLOW             // Matches the wireframe indicator color
-      );
-    }
+    if (!isCameraActive) {
+      const float BTN_SIZE = 120.0f;
+      const float BTN_GAP  =  10.0f;
+      const float BTN_MARGIN = 80.0f;
+      const float BTN_LIFT   = 60.0f;
+
+      float bottomRowY = (float)screenHeight - BTN_MARGIN - BTN_SIZE - BTN_LIFT;
+
+      Vector3 camForward =
+          Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+      Vector3 camRight =
+          Vector3Normalize(Vector3CrossProduct(camForward, camera.up));
+      Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+
+      float   moveAmount = cameraSpeed * dt;
+      Vector2 mousePos   = GetMousePosition();
+      bool    lmbHeld    = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+
+      float dpadCenterX = BTN_MARGIN + BTN_SIZE + BTN_GAP;
+      float midRowY     = bottomRowY - BTN_SIZE - BTN_GAP;
+      float topRowY     = bottomRowY - 2.0f * (BTN_SIZE + BTN_GAP);
+
+      Rectangle btnLeft  = {BTN_MARGIN,                          midRowY,    BTN_SIZE, BTN_SIZE};
+      Rectangle btnRight = {BTN_MARGIN + (BTN_SIZE + BTN_GAP)*2, midRowY,    BTN_SIZE, BTN_SIZE};
+      Rectangle btnUp    = {dpadCenterX,                         topRowY,    BTN_SIZE, BTN_SIZE};
+      Rectangle btnDown  = {dpadCenterX,                         bottomRowY, BTN_SIZE, BTN_SIZE};
+
+      if (lmbHeld && CheckCollisionPointRec(mousePos, btnLeft)) {
+        camera.position = Vector3Subtract(camera.position, Vector3Scale(camRight, moveAmount));
+        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(camRight, moveAmount));
+      }
+      if (lmbHeld && CheckCollisionPointRec(mousePos, btnRight)) {
+        camera.position = Vector3Add(camera.position, Vector3Scale(camRight, moveAmount));
+        camera.target   = Vector3Add(camera.target,   Vector3Scale(camRight, moveAmount));
+      }
+      if (lmbHeld && CheckCollisionPointRec(mousePos, btnUp)) {
+        camera.position = Vector3Add(camera.position, Vector3Scale(worldUp, moveAmount));
+        camera.target   = Vector3Add(camera.target,   Vector3Scale(worldUp, moveAmount));
+      }
+      if (lmbHeld && CheckCollisionPointRec(mousePos, btnDown)) {
+        camera.position = Vector3Subtract(camera.position, Vector3Scale(worldUp, moveAmount));
+        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(worldUp, moveAmount));
+      }
+
+      GuiSetStyle(DEFAULT, TEXT_SIZE, 26);
+      GuiSetAlpha(0.75f);
+      GuiButton(btnLeft,  "< LEFT");
+      GuiButton(btnRight, "RIGHT >");
+      GuiButton(btnUp,    "^  UP");
+      GuiButton(btnDown,  "v DOWN");
+      GuiSetAlpha(1.0f);
+      GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+
+      DrawText("PAN",
+               (int)(dpadCenterX + 20),
+               (int)(topRowY - 40),
+               22, LIGHTGRAY);
+
+      // --- Virtual Joystick ---
+      const float JS_BASE_RADIUS  = 90.0f;
+      const float JS_THUMB_RADIUS = 32.0f;
+      const float JS_DEAD_ZONE    = 0.15f;
+
+      Vector2 jsBase = {
+          (float)screenWidth - BTN_MARGIN - JS_BASE_RADIUS,
+          bottomRowY - BTN_SIZE * 0.5f
+      };
+
+      if (!joystickActive && lmbHeld) {
+        float dx = mousePos.x - jsBase.x;
+        float dy = mousePos.y - jsBase.y;
+        if ((dx*dx + dy*dy) <= (JS_BASE_RADIUS * JS_BASE_RADIUS)) {
+          joystickActive = true;
+          joystickCenter = jsBase;
+          joystickThumb  = mousePos;
+        }
+      }
+
+      if (joystickActive) {
+        if (lmbHeld) {
+          float dx   = mousePos.x - joystickCenter.x;
+          float dy   = mousePos.y - joystickCenter.y;
+          float dist = sqrtf(dx*dx + dy*dy);
+          if (dist > JS_BASE_RADIUS) {
+            dx = (dx / dist) * JS_BASE_RADIUS;
+            dy = (dy / dist) * JS_BASE_RADIUS;
+          }
+          joystickThumb = {joystickCenter.x + dx, joystickCenter.y + dy};
+
+          float normX = (joystickThumb.x - joystickCenter.x) / JS_BASE_RADIUS;
+          float normY = (joystickThumb.y - joystickCenter.y) / JS_BASE_RADIUS;
+
+          if (fabsf(normX) > JS_DEAD_ZONE) {
+            camera.position = Vector3Add(camera.position, Vector3Scale(camRight, normX * moveAmount));
+            camera.target   = Vector3Add(camera.target,   Vector3Scale(camRight, normX * moveAmount));
+          }
+          if (fabsf(normY) > JS_DEAD_ZONE) {
+            camera.position = Vector3Subtract(camera.position, Vector3Scale(camForward, normY * moveAmount));
+            camera.target   = Vector3Subtract(camera.target,   Vector3Scale(camForward, normY * moveAmount));
+          }
+        } else {
+          joystickActive = false;
+          joystickThumb  = jsBase;
+        }
+      }
+
+      DrawCircleV(jsBase, JS_BASE_RADIUS, Color{50, 50, 50, 120});
+      DrawCircleLinesV(jsBase, JS_BASE_RADIUS, Color{255, 255, 255, 160});
+      DrawLineV(Vector2{jsBase.x - JS_BASE_RADIUS*0.6f, jsBase.y},
+                Vector2{jsBase.x + JS_BASE_RADIUS*0.6f, jsBase.y},
+                Color{255, 255, 255, 60});
+      DrawLineV(Vector2{jsBase.x, jsBase.y - JS_BASE_RADIUS*0.6f},
+                Vector2{jsBase.x, jsBase.y + JS_BASE_RADIUS*0.6f},
+                Color{255, 255, 255, 60});
+
+      Vector2 thumbDrawPos      = joystickActive ? joystickThumb : jsBase;
+      float   thumbOutlineR     = joystickActive ? JS_THUMB_RADIUS + 3.0f : JS_THUMB_RADIUS;
+      Color   thumbFill         = joystickActive ? Color{255, 255, 255, 220} : Color{160, 160, 160, 170};
+      DrawCircleV(thumbDrawPos, JS_THUMB_RADIUS, thumbFill);
+      DrawCircleLinesV(thumbDrawPos, thumbOutlineR,
+                       joystickActive ? WHITE : Color{200, 200, 200, 180});
+
+      DrawText("ZOOM / STRAFE",
+               (int)(jsBase.x - 72),
+               (int)(jsBase.y - JS_BASE_RADIUS - 32),
+               22, LIGHTGRAY);
+
+    } // end if (!isCameraActive)
 
     // End the drawing phase and swap the buffers to display the rendered image
     // on the screen.
