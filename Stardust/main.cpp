@@ -156,8 +156,13 @@ int main() {
   // FEATURE 10: 3D LIGHTING (rlights.h)
   // ===========================================================================
   // Load the standard Raylib lighting shaders from the resources folder.
+#if defined(PLATFORM_ANDROID)
+  Shader lightShader = LoadShader("resources/shaders/glsl100/lighting.vs",
+                                  "resources/shaders/glsl100/lighting.fs");
+#else
   Shader lightShader = LoadShader("resources/shaders/glsl330/lighting.vs",
                                   "resources/shaders/glsl330/lighting.fs");
+#endif
 
   // Get the memory location of the "viewPos" variable inside the shader
   // so we can update it every frame for accurate specular highlights.
@@ -543,16 +548,23 @@ int main() {
   // more responsive fly-through experience.
   // ===========================================================================
   float cameraSpeed = 2.0f;
-  // JOYSTICK STATE — must persist across frames, so declared outside the loop.
-  // The joystick is inactive until the user touches inside its base circle.
+  // =========================================================================
+  // MOBILE INPUT STATE — Must persist across frames
+  // =========================================================================
+  // Left Joystick (Movement)
   bool joystickActive = false;
-  Vector2 joystickCenter = {0.0f, 0.0f}; // Fixed base position (set each frame)
-  Vector2 joystickThumb = {0.0f,
-                           0.0f}; // Current thumb position (follows touch)
+  Vector2 joystickCenter = {0.0f, 0.0f};
+  Vector2 joystickThumb = {0.0f, 0.0f};
+  int joystickTouchPointId = -1;
+
+  // Right Screen (Camera Look)
+  bool lookActive = false;
+  Vector2 lastLookPos = {0.0f, 0.0f};
+  int lookTouchPointId = -1;
 
   // Tracks WHICH planet was selected last frame so the toast only fires
   // when the user drags a slider, not when they first tap a planet.
-  Planet* prevSelectedPlanet = nullptr;
+  Planet *prevSelectedPlanet = nullptr;
 
   // =========================================================================
   // TOAST NOTIFICATION STATE — Real-World Value Display
@@ -569,10 +581,10 @@ int main() {
   // toastText: the formatted string built whenever a slider changes, e.g.:
   //   "Earth | Mass: 1.00 Earth masses  (5.97e+24 kg)"
   // =========================================================================
-  float toastTimer        = 0.0f;
-  char  toastText[192]    = {0};
-  float prevSliderMass    = -1.0f;  // -1 = "no planet was selected last frame"
-  float prevSliderRadius  = -1.0f;
+  float toastTimer = 0.0f;
+  char toastText[192] = {0};
+  float prevSliderMass = -1.0f; // -1 = "no planet was selected last frame"
+  float prevSliderRadius = -1.0f;
 
   // ===========================================================================
   // GRAVITATIONAL CONSTANT — Shared by all gravity calculations
@@ -1261,88 +1273,57 @@ int main() {
     //   Row 4 (y+122): RESET SIMULATION button
     // =========================================================================
     {
-      const float PNL_X  = 10.0f;
-      const float PNL_Y  = 10.0f;
-      const float PNL_W  = 340.0f;
-      const float PNL_H  = 162.0f;
-      const float PAD    = 12.0f;
-      const float SLD_X  = PNL_X + 84.0f;          // Left edge of slider bars
-      const float SLD_W  = PNL_W - 84.0f - PAD - 52.0f; // Bar width; 52px for value text
-      const float ROW_H  = 30.0f;
+      const float PNL_X = 10.0f;
+      const float PNL_Y = 10.0f;
+      const float PNL_W = 449.0f;        // Scaled +20%
+      const float PNL_H = 221.0f;        // Scaled +20%
+      const float PAD = 16.0f;           
+      const float SLD_X = PNL_X + 110.0f; 
+      const float SLD_W = PNL_W - 110.0f - PAD - 68.0f; 
+      const float ROW_H = 40.0f;         
 
-      // Dark panel background + thin border
-      DrawRectangleRounded(
-          Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H},
-          0.06f, 8, Color{5, 5, 15, 175});
-      DrawRectangleRoundedLinesEx(
-          Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H},
-          0.06f, 8, 1.5f, Color{55, 55, 85, 210});
+      DrawRectangleRounded(Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H}, 0.06f, 8, Color{5, 5, 15, 175});
+      DrawRectangleRoundedLinesEx(Rectangle{PNL_X, PNL_Y, PNL_W, PNL_H}, 0.06f, 8, 1.5f, Color{55, 55, 85, 210});
 
-      // --- Row 1: Planet name header ---
       float r1Y = PNL_Y + PAD;
       if (selectedPlanet != nullptr) {
-        DrawText(selectedPlanet->name.c_str(),
-                 (int)(PNL_X + PAD), (int)r1Y, 20, YELLOW);
-        DrawText("SELECTED",
-                 (int)(PNL_X + PNL_W - 88.0f), (int)(r1Y + 4), 11,
-                 Color{200, 200, 70, 150});
+        DrawText(selectedPlanet->name.c_str(), (int)(PNL_X + PAD), (int)r1Y, 26, YELLOW); 
+        DrawText("SELECTED", (int)(PNL_X + PNL_W - 108.0f), (int)(r1Y + 5), 14, Color{200, 200, 70, 150});
       } else {
-        DrawText("Tap a planet to select",
-                 (int)(PNL_X + PAD), (int)r1Y, 16,
-                 Color{100, 100, 100, 200});
+        DrawText("Tap a planet to select", (int)(PNL_X + PAD), (int)r1Y, 22, Color{100, 100, 100, 200});
       }
 
-      // Separator line between name and sliders
-      DrawLineEx(
-          Vector2{PNL_X + PAD,           r1Y + 26.0f},
-          Vector2{PNL_X + PNL_W - PAD,   r1Y + 26.0f},
-          1.0f, Color{55, 55, 80, 180});
+      DrawLineEx(Vector2{PNL_X + PAD, r1Y + 35.0f}, Vector2{PNL_X + PNL_W - PAD, r1Y + 35.0f}, 1.0f, Color{55, 55, 80, 180});
 
-      // --- Row 2: Mass slider ---
-      float r2Y = r1Y + 34.0f;
+      float r2Y = r1Y + 46.0f; 
       if (selectedPlanet != nullptr) {
-        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H},
-                  "Mass",
-                  TextFormat("%.2f", selectedPlanet->mass),
-                  &selectedPlanet->mass,
-                  selectedPlanet->massMin, selectedPlanet->massMax);
-      } else {
-        // Draw as visually disabled so the user knows it's inactive
-        GuiSetState(STATE_DISABLED);
-        float dummy = 0.5f;
-        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H}, "Mass", "--",
-                  &dummy, 0.0f, 1.0f);
-        GuiSetState(STATE_NORMAL);
-      }
-
-      // --- Row 3: Radius slider ---
-      float r3Y = r2Y + ROW_H + 8.0f;
-      if (selectedPlanet != nullptr) {
-        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H},
-                  "Radius",
-                  TextFormat("%.2f", selectedPlanet->radius),
-                  &selectedPlanet->radius,
-                  selectedPlanet->radiusMin, selectedPlanet->radiusMax);
+        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H}, "Mass", TextFormat("%.2f", selectedPlanet->mass), &selectedPlanet->mass, selectedPlanet->massMin, selectedPlanet->massMax);
       } else {
         GuiSetState(STATE_DISABLED);
         float dummy = 0.5f;
-        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H}, "Radius", "--",
-                  &dummy, 0.0f, 1.0f);
+        GuiSlider(Rectangle{SLD_X, r2Y, SLD_W, ROW_H}, "Mass", "--", &dummy, 0.0f, 1.0f);
         GuiSetState(STATE_NORMAL);
       }
 
-      // --- Row 4: Reset button (full panel width minus padding) ---
-      float r4Y = r3Y + ROW_H + 8.0f;
-      if (GuiButton(Rectangle{PNL_X + PAD, r4Y, PNL_W - PAD * 2.0f, ROW_H},
-                    "RESET SIMULATION")) {
-        // Clear pointer FIRST before touching the vector (dangling-pointer safety)
-        selectedPlanet     = nullptr;
+      float r3Y = r2Y + ROW_H + 11.0f; 
+      if (selectedPlanet != nullptr) {
+        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H}, "Radius", TextFormat("%.2f", selectedPlanet->radius), &selectedPlanet->radius, selectedPlanet->radiusMin, selectedPlanet->radiusMax);
+      } else {
+        GuiSetState(STATE_DISABLED);
+        float dummy = 0.5f;
+        GuiSlider(Rectangle{SLD_X, r3Y, SLD_W, ROW_H}, "Radius", "--", &dummy, 0.0f, 1.0f);
+        GuiSetState(STATE_NORMAL);
+      }
+
+      float r4Y = r3Y + ROW_H + 11.0f;
+      if (GuiButton(Rectangle{PNL_X + PAD, r4Y, PNL_W - PAD * 2.0f, ROW_H}, "RESET SIMULATION")) {
+        selectedPlanet = nullptr;
         prevSelectedPlanet = nullptr;
-        prevSliderMass     = -1.0f;
-        prevSliderRadius   = -1.0f;
-        toastTimer         = 0.0f;
-        currentState       = PAUSED;
-        activePlanets      = initialPlanets;
+        prevSliderMass = -1.0f;
+        prevSliderRadius = -1.0f;
+        toastTimer = 0.0f;
+        currentState = PAUSED;
+        activePlanets = initialPlanets;
         activeExplosions.clear();
       }
     }
@@ -1355,40 +1336,21 @@ int main() {
     // slider so the user can adjust navigation speed without a keyboard.
     // =========================================================================
     {
-      const float RP_W = 320.0f;
+      const float RP_W = 422.0f; // Scaled +20%
       const float RP_X = (float)screenWidth - RP_W - 10.0f;
       const float RP_Y = 10.0f;
-      const float RP_H = 90.0f;
+      const float RP_H = 122.0f; // Scaled +20%
 
-      DrawRectangleRounded(
-          Rectangle{RP_X, RP_Y, RP_W, RP_H},
-          0.06f, 8, Color{5, 5, 15, 175});
-      DrawRectangleRoundedLinesEx(
-          Rectangle{RP_X, RP_Y, RP_W, RP_H},
-          0.06f, 8, 1.5f, Color{55, 55, 85, 210});
+      DrawRectangleRounded(Rectangle{RP_X, RP_Y, RP_W, RP_H}, 0.06f, 8, Color{5, 5, 15, 175});
+      DrawRectangleRoundedLinesEx(Rectangle{RP_X, RP_Y, RP_W, RP_H}, 0.06f, 8, 1.5f, Color{55, 55, 85, 210});
 
-      // Coloured status dot + label
       bool isPlaying = (currentState == PLAYING);
-      DrawCircleV(Vector2{RP_X + 20.0f, RP_Y + 22.0f}, 7.0f,
-                  isPlaying ? Color{60, 220, 80, 255} : Color{220, 60, 60, 255});
-      DrawText(isPlaying ? "PLAYING" : "PAUSED",
-               (int)(RP_X + 34.0f), (int)(RP_Y + 13.0f), 20,
-               isPlaying ? GREEN : RED);
+      DrawCircleV(Vector2{RP_X + 24.0f, RP_Y + 29.0f}, 10.0f, isPlaying ? Color{60, 220, 80, 255} : Color{220, 60, 60, 255});
+      DrawText(isPlaying ? "PLAYING" : "PAUSED", (int)(RP_X + 43.0f), (int)(RP_Y + 17.0f), 26, isPlaying ? GREEN : RED);
 
-      // Separator
-      DrawLineEx(
-          Vector2{RP_X + 12.0f,       RP_Y + 44.0f},
-          Vector2{RP_X + RP_W - 12.0f, RP_Y + 44.0f},
-          1.0f, Color{55, 55, 80, 180});
+      DrawLineEx(Vector2{RP_X + 14.0f, RP_Y + 58.0f}, Vector2{RP_X + RP_W - 14.0f, RP_Y + 58.0f}, 1.0f, Color{55, 55, 80, 180});
 
-      // Camera speed slider — "Cam Spd" label renders left of the bounds rect,
-      // so we push the slider right enough to keep the label inside the panel.
-      GuiSlider(
-          Rectangle{RP_X + 88.0f, RP_Y + 52.0f, RP_W - 102.0f, 28.0f},
-          "Cam Spd",
-          TextFormat("%.1f", cameraSpeed),
-          &cameraSpeed,
-          0.5f, 50.0f);
+      GuiSlider(Rectangle{RP_X + 116.0f, RP_Y + 68.0f, RP_W - 134.0f, 37.0f}, "Cam Spd", TextFormat("%.1f", cameraSpeed), &cameraSpeed, 0.5f, 50.0f);
     }
 
     // =========================================================================
@@ -1397,24 +1359,25 @@ int main() {
     //
     // ROOT CAUSE OF THE OLD BUG:
     //   prevSliderMass was reset to -1.0f on deselection. The moment ANY planet
-    //   was tapped, the condition (-1 != planet.mass) fired immediately — showing
-    //   a toast before the user had moved anything. This felt like a system error
-    //   notification, not a helpful feedback.
+    //   was tapped, the condition (-1 != planet.mass) fired immediately —
+    //   showing a toast before the user had moved anything. This felt like a
+    //   system error notification, not a helpful feedback.
     //
     // FIX — SELECTION CHANGE GUARD:
     //   We now track prevSelectedPlanet (a Planet pointer). When the pointer
     //   changes (new planet selected), we silently SYNC prevSliderMass and
-    //   prevSliderRadius to the NEW planet's current values. The next comparison
-    //   will be (newValue == newValue) → false → no toast. Toast only fires when
-    //   a value changes WHILE the same planet remains selected = user dragged.
+    //   prevSliderRadius to the NEW planet's current values. The next
+    //   comparison will be (newValue == newValue) → false → no toast. Toast
+    //   only fires when a value changes WHILE the same planet remains selected
+    //   = user dragged.
     // =========================================================================
     if (selectedPlanet != nullptr) {
 
       // Silent sync on new selection — no toast triggered here
       if (selectedPlanet != prevSelectedPlanet) {
         prevSelectedPlanet = selectedPlanet;
-        prevSliderMass     = selectedPlanet->mass;
-        prevSliderRadius   = selectedPlanet->radius;
+        prevSliderMass = selectedPlanet->mass;
+        prevSliderRadius = selectedPlanet->radius;
         // Do NOT set toastTimer here — silence on selection is intentional.
       }
 
@@ -1427,16 +1390,16 @@ int main() {
 
       if (prevSliderMass != selectedPlanet->mass) {
         prevSliderMass = selectedPlanet->mass;
-        toastTimer     = 3.0f;
+        toastTimer = 3.0f;
 
         // Convert sim mass → real-world kg using Earth as the anchor.
         // Sim Earth mass = 10.0 → real Earth mass = 5.972e24 kg
         // earthRatio = how many times heavier/lighter than Earth this body is.
-        const double SIM_EARTH_MASS    = 10.0;
-        const double REAL_EARTH_MASS   = 5.972e24; // kg
+        const double SIM_EARTH_MASS = 10.0;
+        const double REAL_EARTH_MASS = 5.972e24; // kg
 
         double earthRatio = (double)selectedPlanet->mass / SIM_EARTH_MASS;
-        double realKg     = earthRatio * REAL_EARTH_MASS;
+        double realKg = earthRatio * REAL_EARTH_MASS;
 
         // Display: "PlanetName  |  X.XXe+YY kg  |  Z.Zx Earth mass"
         // earthRatio IS the multiplier — no further division needed.
@@ -1449,16 +1412,18 @@ int main() {
 
       if (prevSliderRadius != selectedPlanet->radius) {
         prevSliderRadius = selectedPlanet->radius;
-        toastTimer       = 3.0f;
+        toastTimer = 3.0f;
 
         // Convert sim radius → real-world km using Earth as the anchor.
         // Sim Earth radius = 0.55 → real Earth radius = 6,371 km
-        // earthRadiusRatio = how many times larger/smaller than Earth this body is.
-        const double SIM_EARTH_RADIUS  = 0.55;
+        // earthRadiusRatio = how many times larger/smaller than Earth this body
+        // is.
+        const double SIM_EARTH_RADIUS = 0.55;
         const double REAL_EARTH_RADIUS = 6371.0; // km
 
-        double earthRadiusRatio = (double)selectedPlanet->radius / SIM_EARTH_RADIUS;
-        double realKm           = earthRadiusRatio * REAL_EARTH_RADIUS;
+        double earthRadiusRatio =
+            (double)selectedPlanet->radius / SIM_EARTH_RADIUS;
+        double realKm = earthRadiusRatio * REAL_EARTH_RADIUS;
 
         // Display: "PlanetName  |  XXXXX km  |  Z.Zx Earth radius"
         snprintf(toastText, sizeof(toastText),
@@ -1469,8 +1434,8 @@ int main() {
     } else {
       // Planet deselected — reset all tracking for a clean slate next selection
       prevSelectedPlanet = nullptr;
-      prevSliderMass     = -1.0f;
-      prevSliderRadius   = -1.0f;
+      prevSliderMass = -1.0f;
+      prevSliderRadius = -1.0f;
     }
 
     // =========================================================================
@@ -1481,22 +1446,22 @@ int main() {
     // =========================================================================
     if (toastTimer > 0.0f) {
       toastTimer -= dt;
-      if (toastTimer < 0.0f) toastTimer = 0.0f;
+      if (toastTimer < 0.0f)
+        toastTimer = 0.0f;
 
-      // Alpha: full for first 2.5s, fades to 0 over the final 0.5s
       unsigned char alpha = 255;
       if (toastTimer < 0.5f)
         alpha = (unsigned char)((toastTimer / 0.5f) * 255.0f);
 
-      const int FS = 20;
+      const int FS = 22; // +10% from 20
       int tw = MeasureText(toastText, FS);
       int tx = screenWidth / 2 - tw / 2;
-      int ty = 175; // below both top panels
+      int ty = 175;
 
-      DrawRectangleRounded(
-          Rectangle{(float)(tx - 20), (float)(ty - 9), (float)(tw + 40), (float)(FS + 20)},
-          0.45f, 8,
-          Color{0, 0, 0, (unsigned char)(alpha * 0.65f)});
+      DrawRectangleRounded(Rectangle{(float)(tx - 22), (float)(ty - 10),
+                                     (float)(tw + 44), (float)(FS + 22)},
+                           0.45f, 8,
+                           Color{0, 0, 0, (unsigned char)(alpha * 0.65f)});
 
       DrawText(toastText, tx, ty, FS, Color{255, 228, 110, alpha});
     }
@@ -1504,139 +1469,236 @@ int main() {
     // =========================================================================
     // BOTTOM CONTROL HINT
     // =========================================================================
-    DrawText(
-        "SPACE: Play/Pause  |  Hold RMB + WASD: Free Camera  |  LMB: Select Planet",
-        10, screenHeight - 26, 14, Color{90, 90, 90, 200});
+    DrawText("SPACE: Play/Pause  |  Hold RMB + WASD: Free Camera  |  LMB: "
+             "Select Planet",
+             10, screenHeight - 28, 15, Color{90, 90, 90, 200}); // was 26, 14
 
     // =========================================================================
-    // MOBILE UI NAVIGATION — D-Pad + Virtual Joystick
+    // PLAY / PAUSE BUTTON — Centered at bottom of screen
+    // =========================================================================
+    {
+      const float PP_W = 220.0f;
+      const float PP_H = 88.0f;
+      const float PP_X = (float)screenWidth / 2.0f - PP_W / 2.0f;
+      const float PP_Y = (float)screenHeight - PP_H -
+                         40.0f; // Shifted lower to the bottom edge
+
+      DrawRectangleRounded(
+          Rectangle{PP_X - 5.0f, PP_Y - 5.0f, PP_W + 10.0f, PP_H + 10.0f},
+          0.40f, 8,
+          (currentState == PLAYING) ? Color{50, 180, 70, 80}
+                                    : Color{200, 60, 60, 80});
+
+      GuiSetStyle(DEFAULT, TEXT_SIZE, 28);
+      GuiSetAlpha(0.92f);
+      if (GuiButton(Rectangle{PP_X, PP_Y, PP_W, PP_H},
+                    (currentState == PLAYING) ? "|| PAUSE" : ">  PLAY")) {
+        currentState = (currentState == PLAYING) ? PAUSED : PLAYING;
+      }
+      GuiSetAlpha(1.0f);
+      GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+    }
+
+    // =========================================================================
+    // MOBILE UI NAVIGATION — PUBG Style (Left Move, Right Look, Right Elevate)
     // =========================================================================
     if (!isCameraActive) {
-      const float BTN_SIZE = 120.0f;
-      const float BTN_GAP  =  10.0f;
-      const float BTN_MARGIN = 80.0f;
-      const float BTN_LIFT   = 60.0f;
+      const float JS_BASE_RADIUS  = 156.0f; // Scaled +20%
+      const float JS_THUMB_RADIUS = 54.0f;  // Scaled +20%
+      const float JS_DEAD_ZONE    = 0.10f;
+      const float MARGIN          = 96.0f;
 
-      float bottomRowY = (float)screenHeight - BTN_MARGIN - BTN_SIZE - BTN_LIFT;
+      // Left joystick base position (fixed on left side)
+      Vector2 jsBase = { MARGIN + JS_BASE_RADIUS, (float)screenHeight - MARGIN - JS_BASE_RADIUS };
 
-      Vector3 camForward =
-          Vector3Normalize(Vector3Subtract(camera.target, camera.position));
-      Vector3 camRight =
-          Vector3Normalize(Vector3CrossProduct(camForward, camera.up));
-      Vector3 worldUp = {0.0f, 1.0f, 0.0f};
+      // Elevation buttons (Right side)
+      Rectangle btnUp   = { (float)screenWidth - 160.0f, (float)screenHeight - 360.0f, 120.0f, 100.0f };
+      Rectangle btnDown = { (float)screenWidth - 160.0f, (float)screenHeight - 220.0f, 120.0f, 100.0f };
 
+      // Camera vectors
+      Vector3 camForward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+      Vector3 camRight   = Vector3Normalize(Vector3CrossProduct(camForward, camera.up));
+      Vector3 worldUp    = {0.0f, 1.0f, 0.0f};
       float   moveAmount = cameraSpeed * dt;
-      Vector2 mousePos   = GetMousePosition();
-      bool    lmbHeld    = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
-      float dpadCenterX = BTN_MARGIN + BTN_SIZE + BTN_GAP;
-      float midRowY     = bottomRowY - BTN_SIZE - BTN_GAP;
-      float topRowY     = bottomRowY - 2.0f * (BTN_SIZE + BTN_GAP);
+      int tc = GetTouchPointCount();
 
-      Rectangle btnLeft  = {BTN_MARGIN,                          midRowY,    BTN_SIZE, BTN_SIZE};
-      Rectangle btnRight = {BTN_MARGIN + (BTN_SIZE + BTN_GAP)*2, midRowY,    BTN_SIZE, BTN_SIZE};
-      Rectangle btnUp    = {dpadCenterX,                         topRowY,    BTN_SIZE, BTN_SIZE};
-      Rectangle btnDown  = {dpadCenterX,                         bottomRowY, BTN_SIZE, BTN_SIZE};
+      // 1. Process Elevation Buttons First
+      auto isRectPressed = [&](Rectangle rect) -> bool {
+        if (tc > 0) {
+          for (int t = 0; t < tc; t++) {
+            if (CheckCollisionPointRec(GetTouchPosition(t), rect)) return true;
+          }
+          return false;
+        }
+        return IsMouseButtonDown(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), rect);
+      };
 
-      if (lmbHeld && CheckCollisionPointRec(mousePos, btnLeft)) {
-        camera.position = Vector3Subtract(camera.position, Vector3Scale(camRight, moveAmount));
-        camera.target   = Vector3Subtract(camera.target,   Vector3Scale(camRight, moveAmount));
-      }
-      if (lmbHeld && CheckCollisionPointRec(mousePos, btnRight)) {
-        camera.position = Vector3Add(camera.position, Vector3Scale(camRight, moveAmount));
-        camera.target   = Vector3Add(camera.target,   Vector3Scale(camRight, moveAmount));
-      }
-      if (lmbHeld && CheckCollisionPointRec(mousePos, btnUp)) {
+      if (isRectPressed(btnUp)) {
         camera.position = Vector3Add(camera.position, Vector3Scale(worldUp, moveAmount));
         camera.target   = Vector3Add(camera.target,   Vector3Scale(worldUp, moveAmount));
       }
-      if (lmbHeld && CheckCollisionPointRec(mousePos, btnDown)) {
+      if (isRectPressed(btnDown)) {
         camera.position = Vector3Subtract(camera.position, Vector3Scale(worldUp, moveAmount));
         camera.target   = Vector3Subtract(camera.target,   Vector3Scale(worldUp, moveAmount));
       }
 
-      GuiSetStyle(DEFAULT, TEXT_SIZE, 26);
+      // 2. Touch Routing (Identify Joystick vs Look Area)
+      bool currentJoystickHeld = false;
+      bool currentLookHeld     = false;
+
+      // Define UI Exclusion Zones so sliders and panels don't trigger camera movement (SCALED UP)
+      Rectangle leftPanelRec  = { 10.0f, 10.0f, 449.0f, 221.0f };
+      Rectangle rightPanelRec = { (float)screenWidth - 432.0f, 10.0f, 422.0f, 122.0f };
+      Rectangle playPauseRec  = { (float)screenWidth / 2.0f - 120.0f, (float)screenHeight - 140.0f, 240.0f, 110.0f };
+
+      if (tc > 0) {
+        for (int t = 0; t < tc; t++) {
+          Vector2 tp = GetTouchPosition(t);
+          int tid = GetTouchPointId(t);
+
+          // Ignore touches on ALL UI elements (Panels, Play Button, Fly
+          // Buttons)
+          if (CheckCollisionPointRec(tp, btnUp) ||
+              CheckCollisionPointRec(tp, btnDown) ||
+              CheckCollisionPointRec(tp, leftPanelRec) ||
+              CheckCollisionPointRec(tp, rightPanelRec) ||
+              CheckCollisionPointRec(tp, playPauseRec)) {
+            continue;
+          }
+
+          // Track Joystick (Left Side)
+          if (joystickActive && tid == joystickTouchPointId) {
+            currentJoystickHeld = true;
+            float dx = tp.x - joystickCenter.x;
+            float dy = tp.y - joystickCenter.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > JS_BASE_RADIUS) {
+              dx = (dx / dist) * JS_BASE_RADIUS;
+              dy = (dy / dist) * JS_BASE_RADIUS;
+            }
+            joystickThumb = {joystickCenter.x + dx, joystickCenter.y + dy};
+          }
+          // Track Look (Right Side)
+          else if (lookActive && tid == lookTouchPointId) {
+            currentLookHeld = true;
+            Vector2 delta = {tp.x - lastLookPos.x, tp.y - lastLookPos.y};
+            lastLookPos = tp;
+
+            // Apply Look Delta (Yaw and Pitch)
+            float sensitivity = 0.004f;
+            float yaw = -delta.x * sensitivity;
+            float pitch = -delta.y * sensitivity;
+
+            // Yaw
+            camForward = Vector3RotateByAxisAngle(camForward, worldUp, yaw);
+            camRight =
+                Vector3Normalize(Vector3CrossProduct(camForward, worldUp));
+
+            // Pitch (Prevent gimbal lock / flipping upside down)
+            Vector3 newForward =
+                Vector3RotateByAxisAngle(camForward, camRight, pitch);
+            float dot = Vector3DotProduct(newForward, worldUp);
+            if (dot < 0.95f && dot > -0.95f) {
+              camForward = newForward;
+            }
+
+            camera.target = Vector3Add(camera.position, camForward);
+          }
+          // Unassigned touches (New finger placed on screen)
+          else if (!joystickActive && tp.x < screenWidth / 2.0f) {
+            joystickActive = true;
+            joystickTouchPointId = tid;
+            joystickCenter = jsBase;
+            joystickThumb = tp;
+            currentJoystickHeld = true;
+          } else if (!lookActive && tp.x >= screenWidth / 2.0f) {
+            lookActive = true;
+            lookTouchPointId = tid;
+            lastLookPos = tp;
+            currentLookHeld = true;
+          }
+        }
+      } else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+        // Desktop fallback for testing
+        Vector2 mp = GetMousePosition();
+        // Ignore desktop UI clicks too
+        if (!CheckCollisionPointRec(mp, leftPanelRec) &&
+            !CheckCollisionPointRec(mp, rightPanelRec) &&
+            !CheckCollisionPointRec(mp, playPauseRec) &&
+            !CheckCollisionPointRec(mp, btnUp) &&
+            !CheckCollisionPointRec(mp, btnDown)) {
+          if (mp.x < screenWidth / 2.0f) {
+            joystickActive = true;
+            currentJoystickHeld = true;
+            joystickCenter = jsBase;
+            float dx = mp.x - jsBase.x;
+            float dy = mp.y - jsBase.y;
+            float dist = sqrtf(dx * dx + dy * dy);
+            if (dist > JS_BASE_RADIUS) {
+              dx = (dx / dist) * JS_BASE_RADIUS;
+              dy = (dy / dist) * JS_BASE_RADIUS;
+            }
+            joystickThumb = {joystickCenter.x + dx, joystickCenter.y + dy};
+          }
+        }
+      }
+
+      // Cleanup lifted fingers
+      if (!currentJoystickHeld) {
+        joystickActive = false;
+        joystickTouchPointId = -1;
+        joystickThumb = jsBase;
+      }
+      if (!currentLookHeld) {
+        lookActive = false;
+        lookTouchPointId = -1;
+      }
+
+      // 3. Apply Joystick Movement to Camera
+      if (joystickActive) {
+        float normX = (joystickThumb.x - joystickCenter.x) / JS_BASE_RADIUS;
+        float normY = (joystickThumb.y - joystickCenter.y) / JS_BASE_RADIUS;
+
+        if (fabsf(normX) > JS_DEAD_ZONE) {
+          camera.position = Vector3Add(
+              camera.position, Vector3Scale(camRight, normX * moveAmount));
+          camera.target = Vector3Add(
+              camera.target, Vector3Scale(camRight, normX * moveAmount));
+        }
+        if (fabsf(normY) > JS_DEAD_ZONE) {
+          // Negative Y is up on screen, which means move forward.
+          camera.position = Vector3Subtract(
+              camera.position, Vector3Scale(camForward, normY * moveAmount));
+          camera.target = Vector3Subtract(
+              camera.target, Vector3Scale(camForward, normY * moveAmount));
+        }
+      }
+
+      // --- DRAW UI ELEMENTS ---
+
+      // Joystick
+      DrawCircleV(jsBase, JS_BASE_RADIUS, Color{50, 50, 50, 120});
+      DrawCircleLinesV(jsBase, JS_BASE_RADIUS, Color{255, 255, 255, 160});
+      Vector2 thumbDrawPos = joystickActive ? joystickThumb : jsBase;
+      DrawCircleV(thumbDrawPos, JS_THUMB_RADIUS,
+                  joystickActive ? Color{255, 255, 255, 220}
+                                 : Color{160, 160, 160, 170});
+      DrawText("MOVE", (int)(jsBase.x - 36), (int)(jsBase.y - JS_BASE_RADIUS - 42), 29, LIGHTGRAY);
+
+      // Elevation Buttons
+      GuiSetStyle(DEFAULT, TEXT_SIZE, 24);
       GuiSetAlpha(0.75f);
-      GuiButton(btnLeft,  "< LEFT");
-      GuiButton(btnRight, "RIGHT >");
-      GuiButton(btnUp,    "^  UP");
-      GuiButton(btnDown,  "v DOWN");
+      GuiButton(btnUp, "^ FLY UP");
+      GuiButton(btnDown, "v FLY DN");
       GuiSetAlpha(1.0f);
       GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
 
-      DrawText("PAN",
-               (int)(dpadCenterX + 20),
-               (int)(topRowY - 40),
-               22, LIGHTGRAY);
-
-      // --- Virtual Joystick ---
-      const float JS_BASE_RADIUS  = 90.0f;
-      const float JS_THUMB_RADIUS = 32.0f;
-      const float JS_DEAD_ZONE    = 0.15f;
-
-      Vector2 jsBase = {
-          (float)screenWidth - BTN_MARGIN - JS_BASE_RADIUS,
-          bottomRowY - BTN_SIZE * 0.5f
-      };
-
-      if (!joystickActive && lmbHeld) {
-        float dx = mousePos.x - jsBase.x;
-        float dy = mousePos.y - jsBase.y;
-        if ((dx*dx + dy*dy) <= (JS_BASE_RADIUS * JS_BASE_RADIUS)) {
-          joystickActive = true;
-          joystickCenter = jsBase;
-          joystickThumb  = mousePos;
-        }
+      // Look Hint
+      if (!lookActive && tc == 0) {
+        DrawText("[ Drag Right Half to Look Around ]", screenWidth - 420,
+                 screenHeight / 2, 22, Color{255, 255, 255, 100});
       }
-
-      if (joystickActive) {
-        if (lmbHeld) {
-          float dx   = mousePos.x - joystickCenter.x;
-          float dy   = mousePos.y - joystickCenter.y;
-          float dist = sqrtf(dx*dx + dy*dy);
-          if (dist > JS_BASE_RADIUS) {
-            dx = (dx / dist) * JS_BASE_RADIUS;
-            dy = (dy / dist) * JS_BASE_RADIUS;
-          }
-          joystickThumb = {joystickCenter.x + dx, joystickCenter.y + dy};
-
-          float normX = (joystickThumb.x - joystickCenter.x) / JS_BASE_RADIUS;
-          float normY = (joystickThumb.y - joystickCenter.y) / JS_BASE_RADIUS;
-
-          if (fabsf(normX) > JS_DEAD_ZONE) {
-            camera.position = Vector3Add(camera.position, Vector3Scale(camRight, normX * moveAmount));
-            camera.target   = Vector3Add(camera.target,   Vector3Scale(camRight, normX * moveAmount));
-          }
-          if (fabsf(normY) > JS_DEAD_ZONE) {
-            camera.position = Vector3Subtract(camera.position, Vector3Scale(camForward, normY * moveAmount));
-            camera.target   = Vector3Subtract(camera.target,   Vector3Scale(camForward, normY * moveAmount));
-          }
-        } else {
-          joystickActive = false;
-          joystickThumb  = jsBase;
-        }
-      }
-
-      DrawCircleV(jsBase, JS_BASE_RADIUS, Color{50, 50, 50, 120});
-      DrawCircleLinesV(jsBase, JS_BASE_RADIUS, Color{255, 255, 255, 160});
-      DrawLineV(Vector2{jsBase.x - JS_BASE_RADIUS*0.6f, jsBase.y},
-                Vector2{jsBase.x + JS_BASE_RADIUS*0.6f, jsBase.y},
-                Color{255, 255, 255, 60});
-      DrawLineV(Vector2{jsBase.x, jsBase.y - JS_BASE_RADIUS*0.6f},
-                Vector2{jsBase.x, jsBase.y + JS_BASE_RADIUS*0.6f},
-                Color{255, 255, 255, 60});
-
-      Vector2 thumbDrawPos      = joystickActive ? joystickThumb : jsBase;
-      float   thumbOutlineR     = joystickActive ? JS_THUMB_RADIUS + 3.0f : JS_THUMB_RADIUS;
-      Color   thumbFill         = joystickActive ? Color{255, 255, 255, 220} : Color{160, 160, 160, 170};
-      DrawCircleV(thumbDrawPos, JS_THUMB_RADIUS, thumbFill);
-      DrawCircleLinesV(thumbDrawPos, thumbOutlineR,
-                       joystickActive ? WHITE : Color{200, 200, 200, 180});
-
-      DrawText("ZOOM / STRAFE",
-               (int)(jsBase.x - 72),
-               (int)(jsBase.y - JS_BASE_RADIUS - 32),
-               22, LIGHTGRAY);
 
     } // end if (!isCameraActive)
 
