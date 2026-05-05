@@ -5,6 +5,9 @@
 void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
                          std::vector<Planet> &activePlanets,
                          Planet *&selectedPlanet, bool &isTracking, float dt) {
+  // Cache the previously selected planet so we can detect a change
+  Planet *prevSelected = selectedPlanet;
+
   // Camera zoom / speed modifier
   float wheel = GetMouseWheelMove();
   if (wheel != 0.0f) {
@@ -97,7 +100,10 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
 
       if (closestIndex >= 0) {
         selectedPlanet = &activePlanets[closestIndex];
-        // No longer automatically track on selection
+        // If a DIFFERENT planet was clicked, reset tracking
+        if (selectedPlanet != prevSelected) {
+          isTracking = false;
+        }
       } else {
         selectedPlanet = nullptr;
         isTracking = false;
