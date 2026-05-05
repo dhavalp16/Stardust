@@ -74,7 +74,7 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
 
     if (closestIndex >= 0) {
       selectedPlanet = &activePlanets[closestIndex];
-      isTracking = true;
+      // No longer automatically track on selection
     } else {
       selectedPlanet = nullptr;
       isTracking = false;

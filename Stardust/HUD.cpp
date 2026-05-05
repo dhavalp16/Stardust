@@ -1,6 +1,7 @@
 #include "HUD.h"
 #include "raymath.h"
 #include <cstdio>
+#include "raygui.h"
 
 void DrawSelectionReticle(Planet *selectedPlanet, Camera3D &camera) {
   if (selectedPlanet == nullptr) return;
@@ -32,10 +33,11 @@ void DrawSelectionReticle(Planet *selectedPlanet, Camera3D &camera) {
 
 void DrawDebugOverlay(int screenWidth, int screenHeight,
                       Planet *selectedPlanet, EngineState currentState,
-                      const std::vector<Planet> &activePlanets) {
+                      const std::vector<Planet> &activePlanets,
+                      bool &isTracking) {
   // Top-left: Selected Planet Info
   if (selectedPlanet != nullptr) {
-    DrawRectangleRounded({10, 10, 300, 100}, 0.1f, 8, Color{10, 10, 10, 200});
+    DrawRectangleRounded({10, 10, 300, 200}, 0.1f, 8, Color{10, 10, 10, 200});
     DrawText(selectedPlanet->name.c_str(), 20, 20, 20, YELLOW);
     
     char massText[64];
@@ -46,6 +48,18 @@ void DrawDebugOverlay(int screenWidth, int screenHeight,
     char velText[64];
     snprintf(velText, sizeof(velText), "Velocity: %.2f", velMag);
     DrawText(velText, 20, 70, 16, WHITE);
+
+    GuiSlider({70, 100, 200, 20}, "Mass", TextFormat("%.2f", selectedPlanet->mass), 
+              &selectedPlanet->mass, selectedPlanet->massMin, selectedPlanet->massMax);
+    GuiSlider({70, 130, 200, 20}, "Radius", TextFormat("%.2f", selectedPlanet->radius), 
+              &selectedPlanet->radius, selectedPlanet->radiusMin, selectedPlanet->radiusMax);
+
+    if (GuiButton({20, 160, 260, 30}, isTracking ? "STOP TRACKING" : "TRACK PLANET")) {
+      isTracking = !isTracking;
+    }
+  } else {
+    DrawRectangleRounded({10, 10, 300, 50}, 0.1f, 8, Color{10, 10, 10, 200});
+    DrawText("No planet selected", 20, 25, 20, LIGHTGRAY);
   }
 
   // Top-right: General Engine State

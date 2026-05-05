@@ -9,6 +9,9 @@
 #define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
 
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
 #include "Collision.h"
 #include "HUD.h"
 #include "Input.h"
@@ -239,7 +242,7 @@ int main() {
     EndMode3D();
 
     DrawSelectionReticle(selectedPlanet, camera);
-    DrawDebugOverlay(screenWidth, screenHeight, selectedPlanet, currentState, activePlanets);
+    DrawDebugOverlay(screenWidth, screenHeight, selectedPlanet, currentState, activePlanets, isTracking);
     DrawHelpBar(screenHeight);
 
     EndDrawing();
