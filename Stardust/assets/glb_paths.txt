@@ -1,0 +1,11 @@
+d:\Coding\Stardust\Stardust\assets\earth.glb
+d:\Coding\Stardust\Stardust\assets\jupiter.glb
+d:\Coding\Stardust\Stardust\assets\mars.glb
+d:\Coding\Stardust\Stardust\assets\mercury.glb
+d:\Coding\Stardust\Stardust\assets\moon.glb
+d:\Coding\Stardust\Stardust\assets\neptune.glb
+d:\Coding\Stardust\Stardust\assets\pluto.glb
+d:\Coding\Stardust\Stardust\assets\saturn.glb
+d:\Coding\Stardust\Stardust\assets\sun.glb
+d:\Coding\Stardust\Stardust\assets\uranus.glb
+d:\Coding\Stardust\Stardust\assets\venus.glb
