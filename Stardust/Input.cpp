@@ -32,8 +32,25 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
     }
     camera.target = Vector3Add(camera.position, forward);
 
+    // Dynamic camera speed
+    float distanceToNearest = 99999.0f;
+    for (size_t i = 0; i < activePlanets.size(); i++) {
+      if (!activePlanets[i].isAlive) continue;
+      float d = Vector3Distance(camera.position, activePlanets[i].position);
+      if (d < distanceToNearest) distanceToNearest = d;
+    }
+
+    float speedMultiplier = 1.0f;
+    if (distanceToNearest > 50.0f) {
+      speedMultiplier = distanceToNearest / 50.0f;
+    } else if (distanceToNearest < 20.0f) {
+      speedMultiplier = distanceToNearest / 20.0f;
+      if (speedMultiplier < 0.1f) speedMultiplier = 0.1f;
+    }
+    float effectiveCameraSpeed = cameraSpeed * speedMultiplier;
+
     // WASD Movement
-    float moveAmount = cameraSpeed * dt;
+    float moveAmount = effectiveCameraSpeed * dt;
     if (IsKeyDown(KEY_W)) {
       isTracking = false;
       camera.position = Vector3Add(camera.position, Vector3Scale(forward, moveAmount));
@@ -58,26 +75,33 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
 
   // Mouse Picking Selection (LMB)
   if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-    Ray mouseRay = GetMouseRay(GetMousePosition(), camera);
-    float closestDistance = 999999.0f;
-    int closestIndex = -1;
+    Vector2 mpos = GetMousePosition();
+    // Prevent raycasting if clicking on the UI panels
+    bool overLeftUI = (selectedPlanet != nullptr) ? (mpos.x < 320 && mpos.y < 220) : (mpos.x < 320 && mpos.y < 70);
+    bool overRightUI = (mpos.x > GetScreenWidth() - 260 && mpos.y < 120);
 
-    for (size_t i = 0; i < activePlanets.size(); i++) {
-      if (!activePlanets[i].isAlive) continue;
-      RayCollision collision = GetRayCollisionSphere(
-          mouseRay, activePlanets[i].position, activePlanets[i].radius);
-      if (collision.hit && collision.distance < closestDistance) {
-        closestDistance = collision.distance;
-        closestIndex = (int)i;
+    if (!overLeftUI && !overRightUI) {
+      Ray mouseRay = GetMouseRay(mpos, camera);
+      float closestDistance = 999999.0f;
+      int closestIndex = -1;
+
+      for (size_t i = 0; i < activePlanets.size(); i++) {
+        if (!activePlanets[i].isAlive) continue;
+        RayCollision collision = GetRayCollisionSphere(
+            mouseRay, activePlanets[i].position, activePlanets[i].radius);
+        if (collision.hit && collision.distance < closestDistance) {
+          closestDistance = collision.distance;
+          closestIndex = (int)i;
+        }
       }
-    }
 
-    if (closestIndex >= 0) {
-      selectedPlanet = &activePlanets[closestIndex];
-      // No longer automatically track on selection
-    } else {
-      selectedPlanet = nullptr;
-      isTracking = false;
+      if (closestIndex >= 0) {
+        selectedPlanet = &activePlanets[closestIndex];
+        // No longer automatically track on selection
+      } else {
+        selectedPlanet = nullptr;
+        isTracking = false;
+      }
     }
   }
 }
