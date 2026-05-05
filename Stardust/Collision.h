@@ -1,6 +1,5 @@
 #pragma once
 #include "Planet.h"
-#include "JNIBridge.h"
 #include "raylib.h"
 #include "raymath.h"
 #include <vector>
@@ -15,8 +14,7 @@ struct Fragment {
   bool isAlive;
 };
 
-// Process N-body collisions, spawn fragments, update kill feed, and trigger AI narration.
-// Returns nothing; modifies activePlanets, activeFragments, killFeed in-place.
+// Process N-body collisions and spawn fragments
 void ProcessCollisions(std::vector<Planet> &activePlanets,
                        std::vector<Fragment> &activeFragments,
                        Planet *&selectedPlanet, bool &isTracking);
