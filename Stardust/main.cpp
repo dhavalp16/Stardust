@@ -12,6 +12,9 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+#include "rlgl.h"
+#include "hdr_loader.h"
+
 #include "Collision.h"
 #include "HUD.h"
 #include "Input.h"
@@ -37,6 +40,37 @@ int main() {
   camera.up = Vector3{0.0f, 1.0f, 0.0f};
   camera.fovy = 45.0f;
   camera.projection = CAMERA_PERSPECTIVE;
+
+  // Load HDR with custom loader (Raylib's stb_image fails on this 93MB file)
+  Image skyImg = LoadHDRManual("assets/HDR_multi_nebulae_1.hdr");
+  if (skyImg.data == NULL)
+    skyImg = LoadHDRManual("d:/Coding/Stardust/Stardust/assets/HDR_multi_nebulae_1.hdr");
+  bool hdrLoaded = (skyImg.data != NULL);
+  int hdrW = skyImg.width, hdrH = skyImg.height;
+
+  if (!hdrLoaded) {
+    skyImg = GenImageChecked(512, 256, 32, 32, MAGENTA, DARKBLUE);
+    hdrW = 0; hdrH = 0;
+  }
+
+  // Cap texture size at 8192 for GPU compatibility
+  if (skyImg.width > 8192 || skyImg.height > 8192) {
+    int newW = skyImg.width, newH = skyImg.height;
+    if (newW > 8192) { newH = newH * 8192 / newW; newW = 8192; }
+    if (newH > 8192) { newW = newW * 8192 / newH; newH = 8192; }
+    ImageResize(&skyImg, newW, newH);
+  }
+
+  Texture2D skyboxTexture = LoadTextureFromImage(skyImg);
+  UnloadImage(skyImg);
+  GenTextureMipmaps(&skyboxTexture);
+  SetTextureFilter(skyboxTexture, TEXTURE_FILTER_BILINEAR);
+
+  Shader skyboxShader = LoadShader("resources/shaders/glsl330/skybox.vs",
+                                    "resources/shaders/glsl330/skybox.fs");
+  Model skybox = LoadModelFromMesh(GenMeshSphere(1.0f, 64, 64));
+  skybox.materials[0].shader = skyboxShader;
+  skybox.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = skyboxTexture;
 
   std::vector<Planet> initialPlanets;
   std::vector<Planet> activePlanets;
@@ -126,6 +160,9 @@ int main() {
   bool isTracking = false;
   const float G = 1.0f;
 
+  float trackingZoom = 1.0f;
+  Planet *lastSelectedPlanetForZoom = nullptr;
+
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
     UpdateMusicStream(ambientMusic);
@@ -142,13 +179,27 @@ int main() {
       activeFragments.clear();
     }
 
+    if (selectedPlanet != lastSelectedPlanetForZoom) {
+      trackingZoom = 1.0f;
+      lastSelectedPlanetForZoom = selectedPlanet;
+    }
+
     ProcessDesktopInput(camera, cameraSpeed, activePlanets, selectedPlanet, isTracking, dt);
 
     if (isTracking && selectedPlanet != nullptr && selectedPlanet->isAlive) {
+      // Zoom while tracking
+      float wheel = GetMouseWheelMove();
+      if (wheel != 0.0f && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        trackingZoom -= wheel * 0.1f;
+        if (trackingZoom < 0.2f) trackingZoom = 0.2f; // prevent clipping into planet
+        if (trackingZoom > 5.0f) trackingZoom = 5.0f; // limit max orbit distance
+      }
+
       Vector3 desiredTarget = selectedPlanet->position;
       Vector3 currentOffset = Vector3Subtract(camera.position, selectedPlanet->position);
-      float targetDist = selectedPlanet->radius * 8.0f;
-      if (targetDist < 15.0f) targetDist = 15.0f;
+      float defaultDist = selectedPlanet->radius * 8.0f;
+      if (defaultDist < 15.0f) defaultDist = 15.0f;
+      float targetDist = defaultDist * trackingZoom;
 
       Vector3 dir = Vector3Normalize(currentOffset);
       if (Vector3Length(currentOffset) < 0.1f) dir = Vector3{0.0f, 0.5f, 0.8f};
@@ -189,6 +240,12 @@ int main() {
     BeginDrawing();
     ClearBackground(BLACK);
     BeginMode3D(camera);
+
+    rlDisableBackfaceCulling();
+    rlDisableDepthMask();
+    DrawModelEx(skybox, camera.position, Vector3{1.0f, 0.0f, 0.0f}, 90.0f, Vector3{500.0f, 500.0f, 500.0f}, WHITE);
+    rlEnableBackfaceCulling();
+    rlEnableDepthMask();
 
     for (size_t i = 0; i < activePlanets.size(); i++) {
       if (!activePlanets[i].isAlive) continue;
@@ -241,14 +298,48 @@ int main() {
 
     EndMode3D();
 
+    // Sun bloom effect (screen-space, additive blending)
+    if (activePlanets[0].isAlive) {
+      Vector3 sunPos = activePlanets[0].position;
+      Vector3 camForward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+      Vector3 toSun = Vector3Subtract(sunPos, camera.position);
+      float sunDist = Vector3Length(toSun);
+
+      // Only draw bloom if sun is in front of camera
+      if (sunDist > 0.1f && Vector3DotProduct(camForward, Vector3Normalize(toSun)) > 0.0f) {
+        Vector2 sunScreen = GetWorldToScreen(sunPos, camera);
+        float bloomBase = (activePlanets[0].radius * 800.0f) / sunDist;
+        if (bloomBase < 8.0f) bloomBase = 8.0f;
+
+        BeginBlendMode(BLEND_ADDITIVE);
+        // Outer soft glow
+        DrawCircleGradient((int)sunScreen.x, (int)sunScreen.y, bloomBase * 8.0f,
+                           Color{255, 120, 20, 25}, Color{255, 80, 10, 0});
+        // Mid glow
+        DrawCircleGradient((int)sunScreen.x, (int)sunScreen.y, bloomBase * 4.0f,
+                           Color{255, 170, 50, 50}, Color{255, 120, 30, 0});
+        // Inner bright glow
+        DrawCircleGradient((int)sunScreen.x, (int)sunScreen.y, bloomBase * 2.0f,
+                           Color{255, 210, 100, 80}, Color{255, 160, 50, 0});
+        // Core hot spot
+        DrawCircleGradient((int)sunScreen.x, (int)sunScreen.y, bloomBase * 1.0f,
+                           Color{255, 240, 180, 100}, Color{255, 200, 80, 0});
+        EndBlendMode();
+      }
+    }
+
     DrawSelectionReticle(selectedPlanet, camera);
     DrawDebugOverlay(screenWidth, screenHeight, selectedPlanet, currentState, activePlanets, isTracking);
     DrawHelpBar(screenHeight);
+
+
 
     EndDrawing();
   }
 
   // Cleanup
+  UnloadModel(skybox);
+  UnloadShader(skyboxShader);
   UnloadMusicStream(ambientMusic);
   CloseAudioDevice();
   for (size_t i = 0; i < planetModels.size(); i++) UnloadModel(planetModels[i]);

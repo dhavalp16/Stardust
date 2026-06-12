@@ -11,9 +11,38 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
   // Camera zoom / speed modifier
   float wheel = GetMouseWheelMove();
   if (wheel != 0.0f) {
-    cameraSpeed += wheel * 5.0f;
-    if (cameraSpeed < 1.0f) cameraSpeed = 1.0f;
-    if (cameraSpeed > 100.0f) cameraSpeed = 100.0f;
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+      // RMB + Scroll: Adjust movement speed (Unreal viewport style)
+      cameraSpeed += wheel * 5.0f;
+      if (cameraSpeed < 1.0f) cameraSpeed = 1.0f;
+      if (cameraSpeed > 100.0f) cameraSpeed = 100.0f;
+    } else {
+      // Scroll only: Zoom along camera forward vector (Unity/Unreal style)
+      if (!isTracking) {
+        Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
+
+        // Use same dynamic speed calculation for zoom scale
+        float distanceToNearest = 99999.0f;
+        for (size_t i = 0; i < activePlanets.size(); i++) {
+          if (!activePlanets[i].isAlive) continue;
+          float d = Vector3Distance(camera.position, activePlanets[i].position);
+          if (d < distanceToNearest) distanceToNearest = d;
+        }
+
+        float speedMultiplier = 1.0f;
+        if (distanceToNearest > 50.0f) {
+          speedMultiplier = distanceToNearest / 50.0f;
+        } else if (distanceToNearest < 20.0f) {
+          speedMultiplier = distanceToNearest / 20.0f;
+          if (speedMultiplier < 0.1f) speedMultiplier = 0.1f;
+        }
+        float effectiveCameraSpeed = cameraSpeed * speedMultiplier;
+
+        float zoomAmount = wheel * effectiveCameraSpeed * 0.15f;
+        camera.position = Vector3Add(camera.position, Vector3Scale(forward, zoomAmount));
+        camera.target = Vector3Add(camera.target, Vector3Scale(forward, zoomAmount));
+      }
+    }
   }
 
   // Free Camera (Unreal-style: Hold RMB to Look & Fly)
@@ -73,6 +102,16 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
       isTracking = false;
       camera.position = Vector3Subtract(camera.position, Vector3Scale(right, moveAmount));
       camera.target = Vector3Subtract(camera.target, Vector3Scale(right, moveAmount));
+    }
+    if (IsKeyDown(KEY_Q)) {
+      isTracking = false;
+      camera.position = Vector3Add(camera.position, Vector3Scale(camera.up, moveAmount));
+      camera.target = Vector3Add(camera.target, Vector3Scale(camera.up, moveAmount));
+    }
+    if (IsKeyDown(KEY_E)) {
+      isTracking = false;
+      camera.position = Vector3Subtract(camera.position, Vector3Scale(camera.up, moveAmount));
+      camera.target = Vector3Subtract(camera.target, Vector3Scale(camera.up, moveAmount));
     }
   }
 
