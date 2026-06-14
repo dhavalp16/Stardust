@@ -94,3 +94,4 @@ Runs at your monitor's refresh rate with vsync (tested on GTX 1060+). The O(N²)
 ## License
 
 Do whatever you want with this. It's educational code with way too many comments.
+
