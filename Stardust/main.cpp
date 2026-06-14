@@ -25,6 +25,7 @@ int main() {
   const int screenWidth = 1920;
   const int screenHeight = 1080;
 
+  SetConfigFlags(FLAG_VSYNC_HINT);
   InitWindow(screenWidth, screenHeight, "Stardust");
 
   Shader lightShader = LoadShader("resources/shaders/glsl330/lighting.vs",
@@ -146,7 +147,6 @@ int main() {
   }
 
   activePlanets = initialPlanets;
-  SetTargetFPS(180);
 
   InitAudioDevice();
   Music ambientMusic = LoadMusicStream("assets/ambient_space.mp3");

@@ -311,7 +311,7 @@ We build the solar system. We give each planet a start coordinate, an initial pu
 ```cpp
 while (!WindowShouldClose()) {
 ```
-This loops roughly 144 to 180 times *every second*. Everything inside this loop is one "frame" of a video game.
+This loops as fast as your monitor can show it (usually 60 to 165 times per second). With **vsync** turned on, each frame lines up perfectly with your monitor's refresh cycle, stopping screen tearing. Everything inside this loop is one "frame" of a video game.
 
 *   `dt = GetFrameTime();` grabs the time since the last frame (e.g., 0.006 seconds). It keeps the game running at the same speed regardless of how fast your computer is.
 *   `UpdateMusicStream(ambientMusic);` continually weaves in the next piece of the audio track.

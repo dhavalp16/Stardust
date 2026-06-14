@@ -6,7 +6,7 @@ A real-time N-body physics simulator built with C++ and Raylib. Watch planets or
 
 Stardust simulates a miniature solar system where every celestial body gravitationally pulls on every other body. You can click on planets to adjust their mass and size, then watch the chaos unfold as orbits destabilize or - if you're lucky - form beautiful resonance patterns.
 
-The physics runs at 180 FPS with 10 sub-steps per frame to keep orbits stable. The simulation includes our solar system's 8 planets plus the Moon, each with a detailed 3D model.
+The physics uses 10 sub-steps per frame to keep orbits stable, and vsync syncs rendering to your monitor's refresh rate for tear-free animation. The simulation includes our solar system's 8 planets plus the Moon, each with a detailed 3D model.
 
 ## Features
 
@@ -74,7 +74,7 @@ Because when planets collide they turn into... well, stardust. Also it sounds co
 
 ## Performance
 
-Runs at 180 FPS on modern hardware (tested on GTX 1060+). The O(N²) gravity calculation scales poorly beyond ~100 bodies, but for our 9-planet solar system it's negligible.
+Runs at your monitor's refresh rate with vsync (tested on GTX 1060+). The O(N²) gravity calculation scales poorly beyond ~100 bodies, but for our 9-planet solar system it's negligible.
 
 ## Known quirks
 
