@@ -13,3 +13,5 @@ void DrawDebugOverlay(int screenWidth, int screenHeight,
                       bool &isTracking);
 
 void DrawHelpBar(int screenHeight);
+
+void DrawKeyPressOverlay(int screenWidth, int screenHeight);

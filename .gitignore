@@ -430,5 +430,10 @@ FodyWeavers.xsd
 # User-generated session and guide files (documentation, not source)
 session-*.md
 /Stardust_Architecture_Guide.md
+/Stardust_Architecture_Guide.pdf
 /Stardust_Beginners_Guide.md
 /Stardust_Beginners_Guide.pdf
+
+# Scratch/test files
+/Stardust/test.c
+/Stardust/test.cpp
