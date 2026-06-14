@@ -44,7 +44,7 @@ int main() {
   // Load HDR with custom loader (Raylib's stb_image fails on this 93MB file)
   Image skyImg = LoadHDRManual("assets/HDR_multi_nebulae_1.hdr");
   if (skyImg.data == NULL)
-    skyImg = LoadHDRManual("d:/Coding/Stardust/Stardust/assets/HDR_multi_nebulae_1.hdr");
+    skyImg = LoadHDRManual("Stardust/assets/HDR_multi_nebulae_1.hdr");
   bool hdrLoaded = (skyImg.data != NULL);
   int hdrW = skyImg.width, hdrH = skyImg.height;
 
@@ -331,6 +331,7 @@ int main() {
     DrawSelectionReticle(selectedPlanet, camera);
     DrawDebugOverlay(screenWidth, screenHeight, selectedPlanet, currentState, activePlanets, isTracking);
     DrawHelpBar(screenHeight);
+    DrawKeyPressOverlay(screenWidth, screenHeight);
 
 
 
