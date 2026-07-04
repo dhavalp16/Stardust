@@ -129,6 +129,9 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Physics.cpp" />
+    <ClCompile Include="Collision.cpp" />
+    <ClCompile Include="HUD.cpp" />
+    <ClCompile Include="Input.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -138,8 +141,11 @@
   <ItemGroup>
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Planet.h" />
-    <ClInclude Include="raygui.h" />
     <ClInclude Include="rlights.h" />
+    <ClInclude Include="Collision.h" />
+    <ClInclude Include="HUD.h" />
+    <ClInclude Include="Input.h" />
+    <ClInclude Include="raygui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
