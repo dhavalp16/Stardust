@@ -1,12 +1,12 @@
 #include "Input.h"
+#include "Convert.h"
 #include "raymath.h"
 #include <cmath>
 
 void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
-                         std::vector<Planet> &activePlanets,
-                         Planet *&selectedPlanet, bool &isTracking, float dt) {
-  // Cache the previously selected planet so we can detect a change
-  Planet *prevSelected = selectedPlanet;
+                         const std::vector<sim::Body> &bodies,
+                         int &selected, bool &isTracking, float dt) {
+  int prevSelected = selected; // to detect a change of selection
 
   // Camera zoom / speed modifier
   float wheel = GetMouseWheelMove();
@@ -23,9 +23,9 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
 
         // Use same dynamic speed calculation for zoom scale
         float distanceToNearest = 99999.0f;
-        for (size_t i = 0; i < activePlanets.size(); i++) {
-          if (!activePlanets[i].isAlive) continue;
-          float d = Vector3Distance(camera.position, activePlanets[i].position);
+        for (size_t i = 0; i < bodies.size(); i++) {
+          if (!bodies[i].isAlive) continue;
+          float d = Vector3Distance(camera.position, ToRaylib(bodies[i].position));
           if (d < distanceToNearest) distanceToNearest = d;
         }
 
@@ -66,9 +66,9 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
 
     // Dynamic camera speed
     float distanceToNearest = 99999.0f;
-    for (size_t i = 0; i < activePlanets.size(); i++) {
-      if (!activePlanets[i].isAlive) continue;
-      float d = Vector3Distance(camera.position, activePlanets[i].position);
+    for (size_t i = 0; i < bodies.size(); i++) {
+      if (!bodies[i].isAlive) continue;
+      float d = Vector3Distance(camera.position, ToRaylib(bodies[i].position));
       if (d < distanceToNearest) distanceToNearest = d;
     }
 
@@ -119,7 +119,7 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
   if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
     Vector2 mpos = GetMousePosition();
     // Prevent raycasting if clicking on the UI panels
-    bool overLeftUI = (selectedPlanet != nullptr) ? (mpos.x < 320 && mpos.y < 220) : (mpos.x < 320 && mpos.y < 70);
+    bool overLeftUI = (selected >= 0) ? (mpos.x < 320 && mpos.y < 220) : (mpos.x < 320 && mpos.y < 70);
     bool overRightUI = (mpos.x > GetScreenWidth() - 260 && mpos.y < 120);
 
     if (!overLeftUI && !overRightUI) {
@@ -127,10 +127,10 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
       float closestDistance = 999999.0f;
       int closestIndex = -1;
 
-      for (size_t i = 0; i < activePlanets.size(); i++) {
-        if (!activePlanets[i].isAlive) continue;
+      for (size_t i = 0; i < bodies.size(); i++) {
+        if (!bodies[i].isAlive) continue;
         RayCollision collision = GetRayCollisionSphere(
-            mouseRay, activePlanets[i].position, activePlanets[i].radius);
+            mouseRay, ToRaylib(bodies[i].position), bodies[i].radius);
         if (collision.hit && collision.distance < closestDistance) {
           closestDistance = collision.distance;
           closestIndex = (int)i;
@@ -138,13 +138,13 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
       }
 
       if (closestIndex >= 0) {
-        selectedPlanet = &activePlanets[closestIndex];
+        selected = closestIndex;
         // If a DIFFERENT planet was clicked, reset tracking
-        if (selectedPlanet != prevSelected) {
+        if (selected != prevSelected) {
           isTracking = false;
         }
       } else {
-        selectedPlanet = nullptr;
+        selected = -1;
         isTracking = false;
       }
     }

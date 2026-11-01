@@ -1,20 +1,25 @@
-// Desktop branch — clean C++ engine, no Android/JNI dependencies
+// Stardust desktop app: window, input, rendering and the frame loop.
+// The physics lives in src/sim/ and knows nothing about raylib.
 #include "raylib.h"
 #include "raymath.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include "rlights.h"
-#include "rlgl.h"
 #include "hdr_loader.h"
+#include "rlgl.h"
+#include "rlights.h"
 
 #include "AssetPaths.h"
-#include "Collision.h"
+#include "Convert.h"
+#include "Debris.h"
 #include "HUD.h"
 #include "Input.h"
-#include "Physics.h"
-#include "Planet.h"
+#include "PlanetInfo.h"
+#include "sim/Collision.h"
+#include "sim/Gravity.h"
+#include "sim/Integrator.h"
+#include "sim/SolarSystem.h"
 
 int main() {
   const int screenWidth = 1920;
@@ -66,70 +71,18 @@ int main() {
   skybox.materials[0].shader = skyboxShader;
   skybox.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = skyboxTexture;
 
-  std::vector<Planet> initialPlanets;
-  std::vector<Planet> activePlanets;
+  // Three index-paired arrays: bodies[i] (physics), planetInfo[i] (name, slider
+  // ranges, spin) and planetModels[i] (the 3D model) all describe planet i.
+  const std::vector<sim::PlanetSpec> &specs = sim::SolarSystemSpecs();
+  std::vector<sim::Body> bodies = sim::BuildBodies(specs);
+  std::vector<PlanetInfo> planetInfo = MakePlanetInfo(specs);
   std::vector<Model> planetModels;
-
-  initialPlanets.reserve(16);
-  activePlanets.reserve(16);
-  planetModels.reserve(16);
+  for (const PlanetInfo &info : planetInfo) {
+    planetModels.push_back(LoadModel(info.modelPath.c_str()));
+  }
 
   std::vector<Fragment> activeFragments;
   activeFragments.reserve(1024);
-
-  initialPlanets = {
-      Planet({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 2000.0f, 3.00f,
-             "assets/sun.glb", YELLOW, 0.10f, "Sun", 500.0f, 5000.0f, 1.0f,
-             6.0f),
-      Planet({8.0f * cosf(1.0f), 0.0f, 8.0f * sinf(1.0f)},
-             {-15.811f * sinf(1.0f), 0.0f, 15.811f * cosf(1.0f)}, 0.055f, 0.25f,
-             "assets/mercury.glb", GRAY, 0.02f, "Mercury", 0.01f, 1.0f, 0.1f,
-             1.0f),
-      Planet({14.0f * cosf(3.0f), 0.0f, 14.0f * sinf(3.0f)},
-             {-11.952f * sinf(3.0f), 0.0f, 11.952f * cosf(3.0f)}, 0.815f, 0.50f,
-             "assets/venus.glb", ORANGE, -0.01f, "Venus", 0.1f, 5.0f, 0.1f,
-             2.0f),
-      Planet({20.0f * cosf(5.0f), 0.0f, 20.0f * sinf(5.0f)},
-             {-10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f)}, 10.00f, 0.55f,
-             "assets/earth.glb", BLUE, 0.50f, "Earth", 1.0f, 20.0f, 0.2f, 3.0f),
-      Planet({30.0f * cosf(0.5f), 0.0f, 30.0f * sinf(0.5f)},
-             {-8.165f * sinf(0.5f), 0.0f, 8.165f * cosf(0.5f)}, 0.107f, 0.35f,
-             "assets/mars.glb", RED, 0.48f, "Mars", 0.01f, 2.0f, 0.1f, 1.5f),
-      Planet({55.0f * cosf(2.5f), 0.0f, 55.0f * sinf(2.5f)},
-             {-6.030f * sinf(2.5f), 0.0f, 6.030f * cosf(2.5f)}, 3.00f, 1.80f,
-             "assets/jupiter.glb", BEIGE, 1.50f, "Jupiter", 0.5f, 15.0f, 0.5f,
-             4.0f),
-      Planet({80.0f * cosf(4.5f), 0.0f, 80.0f * sinf(4.5f)},
-             {-5.000f * sinf(4.5f), 0.0f, 5.000f * cosf(4.5f)}, 1.50f, 1.50f,
-             "assets/saturn.glb", GOLD, 1.30f, "Saturn", 0.2f, 10.0f, 0.5f,
-             3.5f),
-      Planet({110.0f * cosf(1.5f), 0.0f, 110.0f * sinf(1.5f)},
-             {-4.264f * sinf(1.5f), 0.0f, 4.264f * cosf(1.5f)}, 0.50f, 1.00f,
-             "assets/uranus.glb", SKYBLUE, -0.80f, "Uranus", 0.1f, 5.0f, 0.3f,
-             2.5f),
-      Planet({140.0f * cosf(3.5f), 0.0f, 140.0f * sinf(3.5f)},
-             {-3.780f * sinf(3.5f), 0.0f, 3.780f * cosf(3.5f)}, 0.60f, 0.95f,
-             "assets/neptune.glb", DARKBLUE, 0.90f, "Neptune", 0.1f, 5.0f, 0.3f,
-             2.5f),
-      Planet({20.0f * cosf(5.0f) + 0.9f, 0.0f, 20.0f * sinf(5.0f)},
-             {-10.000f * sinf(5.0f), 0.0f, 10.000f * cosf(5.0f) + 3.333f},
-             0.012f, 0.15f, "assets/moon.glb", LIGHTGRAY, 0.05f, "Moon", 0.001f,
-             0.5f, 0.05f, 0.5f),
-  };
-
-  Vector3 totalMomentum = {0.0f, 0.0f, 0.0f};
-  for (size_t i = 1; i < initialPlanets.size(); i++) {
-    totalMomentum.x += initialPlanets[i].mass * initialPlanets[i].velocity.x;
-    totalMomentum.y += initialPlanets[i].mass * initialPlanets[i].velocity.y;
-    totalMomentum.z += initialPlanets[i].mass * initialPlanets[i].velocity.z;
-  }
-  initialPlanets[0].velocity.x = -totalMomentum.x / initialPlanets[0].mass;
-  initialPlanets[0].velocity.y = -totalMomentum.y / initialPlanets[0].mass;
-  initialPlanets[0].velocity.z = -totalMomentum.z / initialPlanets[0].mass;
-
-  for (size_t i = 0; i < initialPlanets.size(); i++) {
-    planetModels.push_back(LoadModel(initialPlanets[i].modelPath.c_str()));
-  }
 
   Shader defaultSunShader = planetModels[0].materials[0].shader;
 
@@ -139,8 +92,6 @@ int main() {
     }
   }
 
-  activePlanets = initialPlanets;
-
   InitAudioDevice();
   Music ambientMusic = LoadMusicStream("assets/ambient_space.mp3");
   ambientMusic.looping = true;
@@ -148,13 +99,15 @@ int main() {
   PlayMusicStream(ambientMusic);
 
   EngineState currentState = PAUSED;
-  Planet *selectedPlanet = nullptr;
+  int selected = -1; // index into bodies, or -1 for none
   float cameraSpeed = 20.0f;
   bool isTracking = false;
-  const float G = 1.0f;
+  const sim::GravityParams gravity;
+  const sim::CollisionParams collisions;
+  std::vector<sim::Vec3> accelerations;
 
   float trackingZoom = 1.0f;
-  Planet *lastSelectedPlanetForZoom = nullptr;
+  int lastSelectedForZoom = -1;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
@@ -165,21 +118,25 @@ int main() {
       currentState = (currentState == PLAYING) ? PAUSED : PLAYING;
     }
     if (IsKeyPressed(KEY_R)) {
-      selectedPlanet = nullptr;
+      selected = -1;
       isTracking = false;
       currentState = PAUSED;
-      activePlanets = initialPlanets;
+      bodies = sim::BuildBodies(specs);
+      planetInfo = MakePlanetInfo(specs);
       activeFragments.clear();
     }
 
-    if (selectedPlanet != lastSelectedPlanetForZoom) {
+    if (selected != lastSelectedForZoom) {
       trackingZoom = 1.0f;
-      lastSelectedPlanetForZoom = selectedPlanet;
+      lastSelectedForZoom = selected;
     }
 
-    ProcessDesktopInput(camera, cameraSpeed, activePlanets, selectedPlanet, isTracking, dt);
+    ProcessDesktopInput(camera, cameraSpeed, bodies, selected, isTracking, dt);
 
-    if (isTracking && selectedPlanet != nullptr && selectedPlanet->isAlive) {
+    if (isTracking && selected >= 0 && bodies[selected].isAlive) {
+      const sim::Body &target = bodies[selected];
+      Vector3 targetPos = ToRaylib(target.position);
+
       // Zoom while tracking
       float wheel = GetMouseWheelMove();
       if (wheel != 0.0f && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
@@ -188,18 +145,17 @@ int main() {
         if (trackingZoom > 5.0f) trackingZoom = 5.0f; // limit max orbit distance
       }
 
-      Vector3 desiredTarget = selectedPlanet->position;
-      Vector3 currentOffset = Vector3Subtract(camera.position, selectedPlanet->position);
-      float defaultDist = selectedPlanet->radius * 8.0f;
+      Vector3 currentOffset = Vector3Subtract(camera.position, targetPos);
+      float defaultDist = target.radius * 8.0f;
       if (defaultDist < 15.0f) defaultDist = 15.0f;
       float targetDist = defaultDist * trackingZoom;
 
       Vector3 dir = Vector3Normalize(currentOffset);
       if (Vector3Length(currentOffset) < 0.1f) dir = Vector3{0.0f, 0.5f, 0.8f};
 
-      Vector3 desiredPosition = Vector3Add(selectedPlanet->position, Vector3Scale(dir, targetDist));
+      Vector3 desiredPosition = Vector3Add(targetPos, Vector3Scale(dir, targetDist));
       camera.position = Vector3Lerp(camera.position, desiredPosition, dt * 3.5f);
-      camera.target = Vector3Lerp(camera.target, desiredTarget, dt * 5.0f);
+      camera.target = Vector3Lerp(camera.target, targetPos, dt * 5.0f);
     } else if (isTracking) {
       isTracking = false;
     }
@@ -210,20 +166,22 @@ int main() {
       float subDt = dt / SUB_STEPS;
 
       for (int step = 0; step < SUB_STEPS; step++) {
-        for (size_t i = 0; i < activePlanets.size(); i++) {
-          for (size_t j = i + 1; j < activePlanets.size(); j++) {
-            if (!activePlanets[i].isAlive || !activePlanets[j].isAlive) continue;
-            ApplyGravity(activePlanets[i], activePlanets[i].mass, activePlanets[j], G, subDt);
-            ApplyGravity(activePlanets[j], activePlanets[j].mass, activePlanets[i], G, subDt);
+        sim::ComputeAccelerations(bodies, gravity, accelerations);
+        sim::Kick(bodies, accelerations, subDt);
+        for (const sim::MergeEvent &event : sim::ResolveCollisions(bodies, collisions)) {
+          SpawnDebris(event, planetInfo[event.victim].tint, activeFragments);
+          if (selected == (int)event.victim) {
+            selected = -1;
+            isTracking = false;
           }
+          // Let the sliders reach the merged values.
+          PlanetInfo &survivor = planetInfo[event.survivor];
+          const sim::Body &merged = bodies[event.survivor];
+          if (merged.mass > survivor.massMax) survivor.massMax = merged.mass * 1.5f;
+          if (merged.radius > survivor.radiusMax) survivor.radiusMax = merged.radius * 1.5f;
         }
-        ProcessCollisions(activePlanets, activeFragments, selectedPlanet, isTracking);
       }
-
-      for (size_t i = 0; i < activePlanets.size(); i++) {
-        if (!activePlanets[i].isAlive) continue;
-        UpdatePosition(activePlanets[i], dt);
-      }
+      sim::Drift(bodies, dt);
     }
 
     float camPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -240,13 +198,14 @@ int main() {
     rlEnableBackfaceCulling();
     rlEnableDepthMask();
 
-    for (size_t i = 0; i < activePlanets.size(); i++) {
-      if (!activePlanets[i].isAlive) continue;
+    for (size_t i = 0; i < bodies.size(); i++) {
+      if (!bodies[i].isAlive) continue;
 
-      Vector3 modelScale = {activePlanets[i].radius, activePlanets[i].radius, activePlanets[i].radius};
+      float r = bodies[i].radius;
+      Vector3 modelScale = {r, r, r};
 
       if (currentState == PLAYING) {
-        activePlanets[i].rotationAngle += activePlanets[i].rotationSpeed * dt * RAD2DEG;
+        planetInfo[i].spinAngle += planetInfo[i].spinRate * dt * RAD2DEG;
       }
 
       if (i == 0) {
@@ -254,9 +213,8 @@ int main() {
           planetModels[i].materials[m].shader = defaultSunShader;
       }
 
-      DrawModelEx(planetModels[i], activePlanets[i].position,
-                  Vector3{0.0f, 1.0f, 0.0f}, activePlanets[i].rotationAngle,
-                  modelScale, WHITE);
+      DrawModelEx(planetModels[i], ToRaylib(bodies[i].position), Vector3{0.0f, 1.0f, 0.0f},
+                  planetInfo[i].spinAngle, modelScale, WHITE);
 
       if (i == 0) {
         for (int m = 0; m < planetModels[i].materialCount; m++)
@@ -292,8 +250,8 @@ int main() {
     EndMode3D();
 
     // Sun bloom effect (screen-space, additive blending)
-    if (activePlanets[0].isAlive) {
-      Vector3 sunPos = activePlanets[0].position;
+    if (bodies[0].isAlive) {
+      Vector3 sunPos = ToRaylib(bodies[0].position);
       Vector3 camForward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
       Vector3 toSun = Vector3Subtract(sunPos, camera.position);
       float sunDist = Vector3Length(toSun);
@@ -301,7 +259,7 @@ int main() {
       // Only draw bloom if sun is in front of camera
       if (sunDist > 0.1f && Vector3DotProduct(camForward, Vector3Normalize(toSun)) > 0.0f) {
         Vector2 sunScreen = GetWorldToScreen(sunPos, camera);
-        float bloomBase = (activePlanets[0].radius * 800.0f) / sunDist;
+        float bloomBase = (bodies[0].radius * 800.0f) / sunDist;
         if (bloomBase < 8.0f) bloomBase = 8.0f;
 
         BeginBlendMode(BLEND_ADDITIVE);
@@ -321,12 +279,11 @@ int main() {
       }
     }
 
-    DrawSelectionReticle(selectedPlanet, camera);
-    DrawDebugOverlay(screenWidth, screenHeight, selectedPlanet, currentState, activePlanets, isTracking);
+    DrawSelectionReticle(selected, bodies, planetInfo, camera);
+    DrawDebugOverlay(screenWidth, screenHeight, selected, bodies, planetInfo, currentState,
+                     isTracking);
     DrawHelpBar(screenHeight);
     DrawKeyPressOverlay(screenWidth, screenHeight);
-
-
 
     EndDrawing();
   }

@@ -1,15 +1,19 @@
 #include "HUD.h"
+#include "Convert.h"
 #include "raymath.h"
 #include <cstdio>
 #include <string>
 #include "raygui.h"
 
-void DrawSelectionReticle(Planet *selectedPlanet, Camera3D &camera) {
-  if (selectedPlanet == nullptr) return;
+void DrawSelectionReticle(int selected, const std::vector<sim::Body> &bodies,
+                          const std::vector<PlanetInfo> &info, Camera3D &camera) {
+  if (selected < 0) return;
+  const sim::Body &body = bodies[selected];
+  Vector3 position = ToRaylib(body.position);
 
-  Vector2 p = GetWorldToScreen(selectedPlanet->position, camera);
-  Vector3 edgeWorld = Vector3Add(selectedPlanet->position,
-                                 Vector3Scale(camera.up, selectedPlanet->radius * 1.5f));
+  Vector2 p = GetWorldToScreen(position, camera);
+  Vector3 edgeWorld = Vector3Add(position,
+                                 Vector3Scale(camera.up, body.radius * 1.5f));
   Vector2 edgeScreen = GetWorldToScreen(edgeWorld, camera);
   float circleRadius = Vector2Distance(p, edgeScreen);
   if (circleRadius < 25.0f) circleRadius = 25.0f;
@@ -29,31 +33,32 @@ void DrawSelectionReticle(Planet *selectedPlanet, Camera3D &camera) {
   DrawLineEx({p.x, p.y + circleRadius + 5}, {p.x, p.y + circleRadius + 15}, 2.0f, hudColor);
 
   DrawText("TARGET LOCKED", (int)(p.x + circleRadius + 15), (int)(p.y - 12), 14, hudColor);
-  DrawText(selectedPlanet->name.c_str(), (int)(p.x + circleRadius + 15), (int)(p.y + 6), 20, WHITE);
+  DrawText(info[selected].name.c_str(), (int)(p.x + circleRadius + 15), (int)(p.y + 6), 20, WHITE);
 }
 
-void DrawDebugOverlay(int screenWidth, int screenHeight,
-                      Planet *selectedPlanet, EngineState currentState,
-                      const std::vector<Planet> &activePlanets,
-                      bool &isTracking) {
+void DrawDebugOverlay(int screenWidth, int screenHeight, int selected,
+                      std::vector<sim::Body> &bodies, const std::vector<PlanetInfo> &info,
+                      EngineState currentState, bool &isTracking) {
   // Top-left: Selected Planet Info
-  if (selectedPlanet != nullptr) {
+  if (selected >= 0) {
+    sim::Body &body = bodies[selected];
+    const PlanetInfo &planet = info[selected];
     DrawRectangleRounded({10, 10, 310, 220}, 0.1f, 8, Color{10, 10, 10, 200});
-    DrawText(selectedPlanet->name.c_str(), 20, 20, 22, YELLOW);
+    DrawText(planet.name.c_str(), 20, 20, 22, YELLOW);
     
     char massText[64];
-    snprintf(massText, sizeof(massText), "Mass: %.2f", selectedPlanet->mass);
+    snprintf(massText, sizeof(massText), "Mass: %.2f", body.mass);
     DrawText(massText, 20, 52, 18, WHITE);
 
-    float velMag = Vector3Length(selectedPlanet->velocity);
+    float velMag = sim::Length(body.velocity);
     char velText[64];
     snprintf(velText, sizeof(velText), "Velocity: %.2f", velMag);
     DrawText(velText, 20, 76, 18, WHITE);
 
-    GuiSlider({75, 108, 220, 22}, "Mass", TextFormat("%.2f", selectedPlanet->mass), 
-              &selectedPlanet->mass, selectedPlanet->massMin, selectedPlanet->massMax);
-    GuiSlider({75, 142, 220, 22}, "Radius", TextFormat("%.2f", selectedPlanet->radius), 
-              &selectedPlanet->radius, selectedPlanet->radiusMin, selectedPlanet->radiusMax);
+    GuiSlider({75, 108, 220, 22}, "Mass", TextFormat("%.2f", body.mass),
+              &body.mass, planet.massMin, planet.massMax);
+    GuiSlider({75, 142, 220, 22}, "Radius", TextFormat("%.2f", body.radius),
+              &body.radius, planet.radiusMin, planet.radiusMax);
 
     if (GuiButton({20, 178, 280, 34}, isTracking ? "STOP TRACKING" : "TRACK PLANET")) {
       isTracking = !isTracking;
@@ -68,7 +73,7 @@ void DrawDebugOverlay(int screenWidth, int screenHeight,
   DrawText(TextFormat("FPS: %d", GetFPS()), screenWidth - 240, 22, 22, GREEN);
   
   int aliveCount = 0;
-  for (const auto& p : activePlanets) {
+  for (const auto &p : bodies) {
     if (p.isAlive) aliveCount++;
   }
   DrawText(TextFormat("Planets: %d", aliveCount), screenWidth - 240, 54, 18, WHITE);
