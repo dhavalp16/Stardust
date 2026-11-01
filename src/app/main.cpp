@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
                                   "resources/shaders/glsl330/lighting.fs");
   int viewPosLoc = GetShaderLocation(lightShader, "viewPos");
 
-  Light sun = CreateLight(LIGHT_POINT, Vector3{0.0f, 0.0f, 0.0f}, Vector3Zero(),
+  Light sunLight = CreateLight(LIGHT_POINT, Vector3{0.0f, 0.0f, 0.0f}, Vector3Zero(),
                           WHITE, lightShader);
 
   Camera3D camera = {};
@@ -87,9 +87,9 @@ int main(int argc, char **argv) {
   std::vector<Fragment> activeFragments;
   activeFragments.reserve(1024);
 
-  Shader defaultSunShader = planetModels[0].materials[0].shader;
-
-  for (size_t i = 0; i < planetModels.size(); i++) {
+  // Every planet uses the lighting shader. The Sun (index 0) is skipped and
+  // keeps raylib's default unlit shader, so it looks self-lit.
+  for (size_t i = 1; i < planetModels.size(); i++) {
     for (int m = 0; m < planetModels[i].materialCount; m++) {
       planetModels[i].materials[m].shader = lightShader;
     }
@@ -196,6 +196,11 @@ int main(int argc, char **argv) {
     float camPos[3] = {camera.position.x, camera.position.y, camera.position.z};
     SetShaderValue(lightShader, viewPosLoc, camPos, SHADER_UNIFORM_VEC3);
 
+    // The light sits where the Sun is (the Sun drifts slightly around the
+    // system's centre of mass, and moves more after something hits it).
+    sunLight.position = ToRaylib(bodies[0].position);
+    UpdateLightValues(lightShader, sunLight);
+
     // Rendering
     BeginDrawing();
     ClearBackground(BLACK);
@@ -213,18 +218,8 @@ int main(int argc, char **argv) {
       float r = bodies[i].radius;
       Vector3 modelScale = {r, r, r};
 
-      if (i == 0) {
-        for (int m = 0; m < planetModels[i].materialCount; m++)
-          planetModels[i].materials[m].shader = defaultSunShader;
-      }
-
       DrawModelEx(planetModels[i], ToRaylib(bodies[i].position), Vector3{0.0f, 1.0f, 0.0f},
                   planetInfo[i].spinAngle, modelScale, WHITE);
-
-      if (i == 0) {
-        for (int m = 0; m < planetModels[i].materialCount; m++)
-          planetModels[i].materials[m].shader = lightShader;
-      }
     }
 
     DrawDebris(activeFragments);
