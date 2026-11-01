@@ -16,3 +16,10 @@ struct Fragment {
 
 // Adds 30-50 fragments flying out of the victim of a merge.
 void SpawnDebris(const sim::MergeEvent &event, Color color, std::vector<Fragment> &fragments);
+
+// Moves fragments and fades them out; removes the ones that have faded.
+void UpdateDebris(std::vector<Fragment> &fragments, float dt);
+
+// Draws fragments as small cubes whose transparency follows their life.
+// Call between BeginMode3D and EndMode3D.
+void DrawDebris(const std::vector<Fragment> &fragments);

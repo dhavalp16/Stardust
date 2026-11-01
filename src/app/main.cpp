@@ -186,6 +186,11 @@ int main(int argc, char **argv) {
           if (merged.radius > survivor.radiusMax) survivor.radiusMax = merged.radius * 1.5f;
         }
       }
+
+      // Visual-only motion. It belongs here with the other updates, not in the
+      // drawing code: drawing should only look at state, never change it.
+      for (PlanetInfo &info : planetInfo) info.spinAngle += info.spinRate * dt * RAD2DEG;
+      UpdateDebris(activeFragments, dt);
     }
 
     float camPos[3] = {camera.position.x, camera.position.y, camera.position.z};
@@ -208,10 +213,6 @@ int main(int argc, char **argv) {
       float r = bodies[i].radius;
       Vector3 modelScale = {r, r, r};
 
-      if (currentState == PLAYING) {
-        planetInfo[i].spinAngle += planetInfo[i].spinRate * dt * RAD2DEG;
-      }
-
       if (i == 0) {
         for (int m = 0; m < planetModels[i].materialCount; m++)
           planetModels[i].materials[m].shader = defaultSunShader;
@@ -226,30 +227,7 @@ int main(int argc, char **argv) {
       }
     }
 
-    for (size_t f = 0; f < activeFragments.size(); f++) {
-      if (!activeFragments[f].isAlive) continue;
-
-      if (currentState == PLAYING) {
-        activeFragments[f].position = Vector3Add(activeFragments[f].position,
-                                                 Vector3Scale(activeFragments[f].velocity, dt));
-        activeFragments[f].life -= dt * 0.5f;
-        if (activeFragments[f].life <= 0.0f) {
-          activeFragments[f].isAlive = false;
-          continue;
-        }
-      }
-
-      Color renderColor = activeFragments[f].color;
-      renderColor.a = (unsigned char)(activeFragments[f].life * 255.0f);
-      DrawCubeV(activeFragments[f].position,
-                Vector3{activeFragments[f].size, activeFragments[f].size, activeFragments[f].size},
-                renderColor);
-    }
-
-    activeFragments.erase(
-        std::remove_if(activeFragments.begin(), activeFragments.end(),
-                       [](const Fragment &f) { return !f.isAlive; }),
-        activeFragments.end());
+    DrawDebris(activeFragments);
 
     EndMode3D();
 

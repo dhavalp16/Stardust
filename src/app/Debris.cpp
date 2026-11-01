@@ -1,6 +1,7 @@
 #include "Debris.h"
 #include "Convert.h"
 #include "raymath.h"
+#include <algorithm>
 
 void SpawnDebris(const sim::MergeEvent &event, Color color, std::vector<Fragment> &fragments) {
   Vector3 victimVelocity = ToRaylib(event.victimVelocity);
@@ -22,5 +23,26 @@ void SpawnDebris(const sim::MergeEvent &event, Color color, std::vector<Fragment
     frag.color = color;
     frag.isAlive = true;
     fragments.push_back(frag);
+  }
+}
+
+void UpdateDebris(std::vector<Fragment> &fragments, float dt) {
+  for (Fragment &frag : fragments) {
+    frag.position = Vector3Add(frag.position, Vector3Scale(frag.velocity, dt));
+    frag.life -= dt * 0.5f; // fully faded after 2 seconds
+    if (frag.life <= 0.0f) frag.isAlive = false;
+  }
+  // "Erase-remove idiom": remove_if moves the survivors to the front and
+  // returns where the dead ones start; erase then chops those off the end.
+  fragments.erase(std::remove_if(fragments.begin(), fragments.end(),
+                                 [](const Fragment &f) { return !f.isAlive; }),
+                  fragments.end());
+}
+
+void DrawDebris(const std::vector<Fragment> &fragments) {
+  for (const Fragment &frag : fragments) {
+    Color color = frag.color;
+    color.a = static_cast<unsigned char>(frag.life * 255.0f);
+    DrawCubeV(frag.position, Vector3{frag.size, frag.size, frag.size}, color);
   }
 }
