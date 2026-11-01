@@ -47,6 +47,22 @@ TEST(SolarSystem, OrbitVelocityIsAtRightAnglesToTheParent) {
     sim::Vec3 offset = bodies[i].position - parent.position;
     sim::Vec3 relVel = bodies[i].velocity - parentVelocity;
     EXPECT_NEAR(sim::Dot(offset, relVel), 0.0f, 1e-3f) << specs[i].name;
-    EXPECT_NEAR(sim::Length(relVel), specs[i].orbitSpeed, 1e-4f) << specs[i].name;
+    double expected = sim::CircularOrbitSpeed(1.0, parent.mass, specs[i].orbitRadius);
+    EXPECT_NEAR(sim::Length(relVel), expected, 1e-9) << specs[i].name;
   }
+}
+
+TEST(SolarSystem, CircularOrbitSpeedMatchesTheFormula) {
+  // Earth: G = 1, Sun mass 2000, radius 20  ->  sqrt(2000 / 20) = 10.
+  EXPECT_DOUBLE_EQ(sim::CircularOrbitSpeed(1.0, 2000.0, 20.0), 10.0);
+}
+
+TEST(SolarSystem, ComputedSpeedsMatchTheOldHandTypedValues) {
+  // Before this was computed, the speeds were typed in by hand to 3 decimals.
+  // Mercury 15.811, Venus 11.952, Mars 8.165, Jupiter 6.030, Moon 3.333.
+  EXPECT_NEAR(sim::CircularOrbitSpeed(1.0, 2000.0, 8.0), 15.811, 5e-4);
+  EXPECT_NEAR(sim::CircularOrbitSpeed(1.0, 2000.0, 14.0), 11.952, 5e-4);
+  EXPECT_NEAR(sim::CircularOrbitSpeed(1.0, 2000.0, 30.0), 8.165, 5e-4);
+  EXPECT_NEAR(sim::CircularOrbitSpeed(1.0, 2000.0, 55.0), 6.030, 5e-4);
+  EXPECT_NEAR(sim::CircularOrbitSpeed(1.0, 10.0, 0.9), 3.333, 5e-4);
 }

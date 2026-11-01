@@ -1,5 +1,6 @@
 #pragma once
 #include "sim/Body.h"
+#include "sim/Gravity.h"
 #include <cstddef>
 #include <vector>
 
@@ -12,12 +13,11 @@ struct PlanetSpec {
   const char *name;
 
   // Orbit: the body starts `orbitRadius` from its parent at angle `phase`
-  // (radians, in the horizontal x-z plane), moving at `orbitSpeed` relative to
-  // the parent, at right angles to the line joining them.
+  // (radians, in the horizontal x-z plane), moving relative to the parent at
+  // circular-orbit speed, at right angles to the line joining them.
   int parent; // index of the body it orbits, or -1 for none (the Sun)
   float orbitRadius;
   float phase;
-  float orbitSpeed;
 
   float mass;
   float radius;
@@ -35,6 +35,11 @@ const std::vector<PlanetSpec> &SolarSystemSpecs();
 
 // Turns specs into bodies. Afterwards the Sun's velocity is set so the total
 // momentum of the system is zero, which keeps the system from drifting away.
-std::vector<Body> BuildBodies(const std::vector<PlanetSpec> &specs);
+std::vector<Body> BuildBodies(const std::vector<PlanetSpec> &specs, float G = GravityParams{}.G);
+
+// The speed for a circular orbit of radius r around a mass M:  v = sqrt(G * M / r).
+// It comes from setting gravity (G M m / r^2) equal to the force needed to keep
+// something moving in a circle (m v^2 / r).
+double CircularOrbitSpeed(double G, double parentMass, double r);
 
 } // namespace sim

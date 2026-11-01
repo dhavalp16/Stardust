@@ -1,7 +1,10 @@
 // Tests for whole simulation steps, using the real starting scenario.
+#include "sim/Diagnostics.h"
 #include "sim/FixedTimestep.h"
 #include "sim/Simulation.h"
 #include "sim/SolarSystem.h"
+#include <algorithm>
+#include <cmath>
 #include <gtest/gtest.h>
 
 using sim::Body;
@@ -67,4 +70,26 @@ TEST(Simulation, StepReportsMerges) {
   auto events = simulation.Step(0.001f);
   ASSERT_EQ(events.size(), 1u);
   EXPECT_EQ(events[0].victim, 1u);
+}
+
+TEST(Simulation, TheSolarSystemStaysStableForFiveMinutes) {
+  // 300 simulated seconds at the app's step size: about 170 Moon orbits.
+  // Measured when this test was written: no merges, closest Earth-Moon
+  // approach 0.671 (merging happens below 0.56), worst relative energy
+  // error 1.6e-8, total momentum below 1e-11.
+  Simulation simulation(sim::BuildBodies(sim::SolarSystemSpecs()));
+  const auto &gravity = simulation.Params().gravity;
+  const double e0 = sim::TotalEnergy(simulation.Bodies(), gravity);
+  double closestEarthMoon = 1e9;
+
+  for (int i = 0; i < 600 * 300; i++) {
+    EXPECT_TRUE(simulation.Step(1.0 / 600.0).empty()) << "merge at step " << i;
+    const auto &b = simulation.Bodies();
+    closestEarthMoon = std::min(closestEarthMoon, sim::Length(b[9].position - b[3].position));
+  }
+
+  double energyError = std::abs((sim::TotalEnergy(simulation.Bodies(), gravity) - e0) / e0);
+  EXPECT_GT(closestEarthMoon, 0.6);
+  EXPECT_LT(energyError, 1e-6);
+  EXPECT_LT(sim::Length(sim::TotalMomentum(simulation.Bodies())), 1e-9);
 }
