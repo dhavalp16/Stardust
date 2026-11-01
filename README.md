@@ -10,6 +10,10 @@ raylib provides the window, input, model loading and drawing. The simulation,
 integrator, collision handling, camera controls, HUD and the HDR sky loader are
 this project's own code.
 
+![Tracking Earth: the planet panel with live mass and radius sliders, the target reticle, and the Moon beside Earth](docs/images/tracking-earth.png)
+
+*Captured with `Stardust.exe --screenshots`, after 6 simulated seconds of the scripted run.*
+
 ## Highlights
 
 - **Physics library with no graphics dependency.** `src/sim/` builds and is

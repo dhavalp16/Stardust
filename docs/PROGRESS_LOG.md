@@ -69,3 +69,12 @@ order 1, 2, 3, 4. See `docs/GIT_GUIDE.md`.
   screenshot runs.
 - Next: `docs/learning-guide` (README, learning material, interview prep, git
   guide, resume claims, final report), then verify every commit builds.
+- CI on `refactor/app-loop` failed once warnings became errors: MSVC flagged
+  C4244 (double to float) at `src/app/HUD.cpp:24`, which clang's default warnings
+  miss. CI logs need admin rights to read, so an MSVC problem matcher was added to
+  turn warnings into public annotations; that showed the line; fixed in `6c3cdda`.
+  All three code branches are now green on Windows/MSVC and Linux/GCC.
+- `docs/learning-guide`: README, decision records 0002-0004, roadmap, check-by-eye
+  list, learning chapters 0-11 + glossary, git guide, resume claims.
+- Every commit was then rebuilt and tested in a separate worktree
+  (`verify.sh`, results in `docs/FINAL_REPORT.md`).

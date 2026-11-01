@@ -114,7 +114,7 @@ are easy to get wrong:
 > When a vector grows it may move all its elements to new memory, and the pointer
 > would then point at freed memory (a **dangling pointer**). It happened to work
 > because the vector never grew. The new code stores the **index** instead:
-> `int selected = -1;` (`src/app/main.cpp:198`), which stays valid.
+> `int selected = -1;` (`src/app/main.cpp:203`), which stays valid.
 
 The HUD sliders do use a pointer on purpose: `GuiSlider(..., &body.mass, ...)`
 (`src/app/HUD.cpp:60`) gives raygui the address of the mass so it can write the new
@@ -245,7 +245,7 @@ Some things must be given back: memory, open files, GPU textures. Forgetting is 
 
 C++'s answer is **RAII** ("Resource Acquisition Is Initialisation"): tie the resource
 to an object whose **destructor** (the function that runs automatically when an
-object goes out of scope) releases it. In `src/io/HdrLoader.cpp:31-37`:
+object goes out of scope) releases it. In `src/io/HdrLoader.cpp:32-36`:
 
 ```cpp
 struct FileCloser { void operator()(std::FILE *f) const { std::fclose(f); } };
