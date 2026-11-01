@@ -31,10 +31,14 @@ FetchContent_MakeAvailable(raylib)
 # The application
 # ---------------------------------------------------------------------------
 add_executable(Stardust
-  Stardust/main.cpp
-  Stardust/Physics.cpp
-  Stardust/Collision.cpp
-  Stardust/HUD.cpp
-  Stardust/Input.cpp
+  src/main.cpp
+  src/AssetPaths.cpp
+  src/Physics.cpp
+  src/Collision.cpp
+  src/HUD.cpp
+  src/Input.cpp
 )
+target_include_directories(Stardust PRIVATE src third_party)
 target_link_libraries(Stardust PRIVATE raylib)
+# Lets the app find assets/ and resources/ when run straight from the build folder.
+target_compile_definitions(Stardust PRIVATE STARDUST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

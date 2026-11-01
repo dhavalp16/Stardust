@@ -15,6 +15,7 @@
 #include "rlgl.h"
 #include "hdr_loader.h"
 
+#include "AssetPaths.h"
 #include "Collision.h"
 #include "HUD.h"
 #include "Input.h"
@@ -24,6 +25,8 @@
 int main() {
   const int screenWidth = 1920;
   const int screenHeight = 1080;
+
+  ChangeToAssetRoot();
 
   SetConfigFlags(FLAG_VSYNC_HINT);
   InitWindow(screenWidth, screenHeight, "Stardust");
@@ -44,8 +47,6 @@ int main() {
 
   // Load HDR with custom loader (Raylib's stb_image fails on this 93MB file)
   Image skyImg = LoadHDRManual("assets/HDR_multi_nebulae_1.hdr");
-  if (skyImg.data == NULL)
-    skyImg = LoadHDRManual("Stardust/assets/HDR_multi_nebulae_1.hdr");
   bool hdrLoaded = (skyImg.data != NULL);
   int hdrW = skyImg.width, hdrH = skyImg.height;
 
