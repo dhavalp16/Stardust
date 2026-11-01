@@ -67,6 +67,7 @@ if(STARDUST_BUILD_APP)
     src/app/Debris.cpp
     src/app/HUD.cpp
     src/app/Input.cpp
+    src/app/ScreenshotScript.cpp
     src/app/ThirdPartyImpl.cpp
   )
   target_include_directories(Stardust PRIVATE src/app)

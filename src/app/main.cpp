@@ -16,11 +16,14 @@
 #include "HUD.h"
 #include "Input.h"
 #include "PlanetInfo.h"
+#include "ScreenshotScript.h"
 #include "sim/FixedTimestep.h"
 #include "sim/Simulation.h"
 #include "sim/SolarSystem.h"
 
-int main() {
+int main(int argc, char **argv) {
+  ScreenshotScript script = ParseScreenshotScript(argc, argv);
+
   const int screenWidth = 1920;
   const int screenHeight = 1080;
 
@@ -109,7 +112,10 @@ int main() {
   float trackingZoom = 1.0f;
   int lastSelectedForZoom = -1;
 
-  while (!WindowShouldClose()) {
+  double simulatedSeconds = 0.0; // total physics time since start or reset
+  bool quit = false;
+
+  while (!WindowShouldClose() && !quit) {
     float dt = GetFrameTime();
     UpdateMusicStream(ambientMusic);
 
@@ -123,6 +129,7 @@ int main() {
       currentState = PAUSED;
       bodies = sim::BuildBodies(specs);
       physicsClock.Reset();
+      simulatedSeconds = 0.0;
       planetInfo = MakePlanetInfo(specs);
       activeFragments.clear();
     }
@@ -165,6 +172,7 @@ int main() {
     if (currentState == PLAYING) {
       int steps = physicsClock.Advance(dt);
       for (int step = 0; step < steps; step++) {
+        simulatedSeconds += physicsClock.StepSeconds();
         for (const sim::MergeEvent &event : simulation.Step(physicsClock.StepSeconds())) {
           SpawnDebris(event, planetInfo[event.victim].tint, activeFragments);
           if (selected == (int)event.victim) {
@@ -280,6 +288,33 @@ int main() {
                      isTracking);
     DrawHelpBar(screenHeight);
     DrawKeyPressOverlay(screenWidth, screenHeight);
+
+    if (script.Active()) {
+      script.framesInStage++;
+      double inStage = simulatedSeconds - script.stageStartSimTime;
+      bool advance = false;
+      if (script.stage == 0 && script.framesInStage == 30) {
+        SaveScreen(script, "1_paused.png");
+        currentState = PLAYING;
+        advance = true;
+      } else if (script.stage == 1 && inStage >= 3.0) {
+        SaveScreen(script, "2_playing.png");
+        selected = 3; // Earth
+        isTracking = true;
+        advance = true;
+      } else if (script.stage == 2 && inStage >= 3.0) {
+        SaveScreen(script, "3_tracking_earth.png");
+        int alive = 0;
+        for (const sim::Body &b : bodies) alive += b.isAlive ? 1 : 0;
+        TraceLog(LOG_INFO, "STARDUST: screenshot script done, %d bodies alive", alive);
+        quit = true;
+      }
+      if (advance) {
+        script.stage++;
+        script.framesInStage = 0;
+        script.stageStartSimTime = simulatedSeconds;
+      }
+    }
 
     EndDrawing();
   }
