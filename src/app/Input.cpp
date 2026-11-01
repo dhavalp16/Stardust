@@ -2,7 +2,28 @@
 #include "Convert.h"
 #include "HudLayout.h"
 #include "raymath.h"
+#include <algorithm>
 #include <cmath>
+
+namespace {
+
+// Scales camera movement by distance to the nearest planet: fast in empty
+// space (more than 50 units away), slow near a surface (under 20 units, down
+// to a tenth of normal speed), normal in between.
+float DistanceSpeedMultiplier(const Camera3D &camera, const std::vector<sim::Body> &bodies) {
+  float distanceToNearest = 99999.0f;
+  for (const sim::Body &body : bodies) {
+    if (!body.isAlive) continue;
+    float d = Vector3Distance(camera.position, ToRaylib(body.position));
+    if (d < distanceToNearest) distanceToNearest = d;
+  }
+
+  if (distanceToNearest > 50.0f) return distanceToNearest / 50.0f;
+  if (distanceToNearest < 20.0f) return std::max(distanceToNearest / 20.0f, 0.1f);
+  return 1.0f;
+}
+
+} // namespace
 
 void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
                          const std::vector<sim::Body> &bodies,
@@ -22,22 +43,7 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
       if (!isTracking) {
         Vector3 forward = Vector3Normalize(Vector3Subtract(camera.target, camera.position));
 
-        // Use same dynamic speed calculation for zoom scale
-        float distanceToNearest = 99999.0f;
-        for (size_t i = 0; i < bodies.size(); i++) {
-          if (!bodies[i].isAlive) continue;
-          float d = Vector3Distance(camera.position, ToRaylib(bodies[i].position));
-          if (d < distanceToNearest) distanceToNearest = d;
-        }
-
-        float speedMultiplier = 1.0f;
-        if (distanceToNearest > 50.0f) {
-          speedMultiplier = distanceToNearest / 50.0f;
-        } else if (distanceToNearest < 20.0f) {
-          speedMultiplier = distanceToNearest / 20.0f;
-          if (speedMultiplier < 0.1f) speedMultiplier = 0.1f;
-        }
-        float effectiveCameraSpeed = cameraSpeed * speedMultiplier;
+        float effectiveCameraSpeed = cameraSpeed * DistanceSpeedMultiplier(camera, bodies);
 
         float zoomAmount = wheel * effectiveCameraSpeed * 0.15f;
         camera.position = Vector3Add(camera.position, Vector3Scale(forward, zoomAmount));
@@ -65,22 +71,7 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
     }
     camera.target = Vector3Add(camera.position, forward);
 
-    // Dynamic camera speed
-    float distanceToNearest = 99999.0f;
-    for (size_t i = 0; i < bodies.size(); i++) {
-      if (!bodies[i].isAlive) continue;
-      float d = Vector3Distance(camera.position, ToRaylib(bodies[i].position));
-      if (d < distanceToNearest) distanceToNearest = d;
-    }
-
-    float speedMultiplier = 1.0f;
-    if (distanceToNearest > 50.0f) {
-      speedMultiplier = distanceToNearest / 50.0f;
-    } else if (distanceToNearest < 20.0f) {
-      speedMultiplier = distanceToNearest / 20.0f;
-      if (speedMultiplier < 0.1f) speedMultiplier = 0.1f;
-    }
-    float effectiveCameraSpeed = cameraSpeed * speedMultiplier;
+    float effectiveCameraSpeed = cameraSpeed * DistanceSpeedMultiplier(camera, bodies);
 
     // WASD Movement
     float moveAmount = effectiveCameraSpeed * dt;

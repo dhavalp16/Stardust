@@ -99,11 +99,18 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Ambient music is optional: the file is not in the repository. Put any mp3
+  // at assets/ambient_space.mp3 to hear it.
   InitAudioDevice();
-  Music ambientMusic = LoadMusicStream("assets/ambient_space.mp3");
-  ambientMusic.looping = true;
-  SetMusicVolume(ambientMusic, 0.025f);
-  PlayMusicStream(ambientMusic);
+  const char *musicPath = "assets/ambient_space.mp3";
+  bool hasMusic = FileExists(musicPath);
+  Music ambientMusic = {};
+  if (hasMusic) {
+    ambientMusic = LoadMusicStream(musicPath);
+    ambientMusic.looping = true;
+    SetMusicVolume(ambientMusic, 0.025f);
+    PlayMusicStream(ambientMusic);
+  }
 
   EngineState currentState = PAUSED;
   int selected = -1; // index into bodies, or -1 for none
@@ -121,7 +128,7 @@ int main(int argc, char **argv) {
 
   while (!WindowShouldClose() && !quit) {
     float dt = GetFrameTime();
-    UpdateMusicStream(ambientMusic);
+    if (hasMusic) UpdateMusicStream(ambientMusic);
 
     // Controls
     if (IsKeyPressed(KEY_SPACE)) {
@@ -166,8 +173,13 @@ int main(int argc, char **argv) {
       if (Vector3Length(currentOffset) < 0.1f) dir = Vector3{0.0f, 0.5f, 0.8f};
 
       Vector3 desiredPosition = Vector3Add(targetPos, Vector3Scale(dir, targetDist));
-      camera.position = Vector3Lerp(camera.position, desiredPosition, dt * 3.5f);
-      camera.target = Vector3Lerp(camera.target, targetPos, dt * 5.0f);
+      // Ease towards the goal. Moving a fixed fraction (1 - e^(-k*dt)) of the
+      // remaining distance each frame gives the same motion at any frame rate;
+      // the old "dt * k" overshot when a frame was long (dt * 3.5 > 1).
+      float positionBlend = 1.0f - std::exp(-3.5f * dt);
+      float targetBlend = 1.0f - std::exp(-5.0f * dt);
+      camera.position = Vector3Lerp(camera.position, desiredPosition, positionBlend);
+      camera.target = Vector3Lerp(camera.target, targetPos, targetBlend);
     } else if (isTracking) {
       isTracking = false;
     }
@@ -300,7 +312,7 @@ int main(int argc, char **argv) {
   // Cleanup
   UnloadModel(skybox);
   UnloadShader(skyboxShader);
-  UnloadMusicStream(ambientMusic);
+  if (hasMusic) UnloadMusicStream(ambientMusic);
   CloseAudioDevice();
   for (size_t i = 0; i < planetModels.size(); i++) UnloadModel(planetModels[i]);
   UnloadShader(lightShader);
