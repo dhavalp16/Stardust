@@ -151,7 +151,7 @@ Severity scale:
     into the Windows release branch; there is a "dummy commit" PR; there are no
     tags. Nothing was rewritten (that would break your links). See
     `docs/GIT_GUIDE.md` for the recommended structure and the steps for you.
-22. **93 MB HDR and ~55 MB of models live in normal git history**, so every clone
+22. **93 MB HDR and ~46 MB of models live in normal git history**, so every clone
     is about 100 MB. Moving them to Git LFS needs a history rewrite and force-push,
     which is your decision; the steps are in the roadmap.
 23. **Dead files on the desktop branch:** `resources/shaders/glsl100/*` (Android
