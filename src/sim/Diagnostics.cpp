@@ -1,0 +1,40 @@
+#include "sim/Diagnostics.h"
+#include <cmath>
+
+namespace sim {
+
+Vec3 TotalMomentum(const std::vector<Body> &bodies) {
+  Vec3 total;
+  for (const Body &body : bodies) {
+    if (body.isAlive) total += body.velocity * body.mass;
+  }
+  return total;
+}
+
+Vec3 CenterOfMass(const std::vector<Body> &bodies) {
+  Vec3 weighted;
+  float totalMass = 0.0f;
+  for (const Body &body : bodies) {
+    if (!body.isAlive) continue;
+    weighted += body.position * body.mass;
+    totalMass += body.mass;
+  }
+  return totalMass > 0.0f ? weighted / totalMass : Vec3{};
+}
+
+double TotalEnergy(const std::vector<Body> &bodies, const GravityParams &params) {
+  // Summed in double precision: the total is a small difference of large terms.
+  double kinetic = 0.0, potential = 0.0;
+  for (size_t i = 0; i < bodies.size(); i++) {
+    if (!bodies[i].isAlive) continue;
+    kinetic += 0.5 * bodies[i].mass * LengthSquared(bodies[i].velocity);
+    for (size_t j = i + 1; j < bodies.size(); j++) {
+      if (!bodies[j].isAlive) continue;
+      double r = Length(bodies[j].position - bodies[i].position);
+      potential -= params.G * bodies[i].mass * bodies[j].mass / r;
+    }
+  }
+  return kinetic + potential;
+}
+
+} // namespace sim

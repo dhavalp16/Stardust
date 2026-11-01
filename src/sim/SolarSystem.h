@@ -37,7 +37,4 @@ const std::vector<PlanetSpec> &SolarSystemSpecs();
 // momentum of the system is zero, which keeps the system from drifting away.
 std::vector<Body> BuildBodies(const std::vector<PlanetSpec> &specs);
 
-// Sum of mass * velocity over all live bodies.
-Vec3 TotalMomentum(const std::vector<Body> &bodies);
-
 } // namespace sim

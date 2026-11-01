@@ -34,6 +34,7 @@ include(FetchContent)
 # ---------------------------------------------------------------------------
 add_library(stardust_sim STATIC
   src/sim/Collision.cpp
+  src/sim/Diagnostics.cpp
   src/sim/Gravity.cpp
   src/sim/Integrator.cpp
   src/sim/Simulation.cpp

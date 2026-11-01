@@ -1,4 +1,5 @@
 #include "sim/SolarSystem.h"
+#include "sim/Diagnostics.h"
 #include <cmath>
 
 namespace sim {
@@ -45,14 +46,6 @@ std::vector<Body> BuildBodies(const std::vector<PlanetSpec> &specs) {
   // mass stays still. Index 0 is the Sun and starts with zero velocity.
   bodies[0].velocity = -TotalMomentum(bodies) / bodies[0].mass;
   return bodies;
-}
-
-Vec3 TotalMomentum(const std::vector<Body> &bodies) {
-  Vec3 total;
-  for (const Body &body : bodies) {
-    if (body.isAlive) total += body.velocity * body.mass;
-  }
-  return total;
 }
 
 } // namespace sim

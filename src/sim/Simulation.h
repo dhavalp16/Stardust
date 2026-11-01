@@ -7,9 +7,18 @@
 
 namespace sim {
 
+// How a step turns forces into motion. Both are "symplectic" (they keep orbits
+// closed instead of spiralling), but Verlet's error shrinks with the square of
+// the step size, Euler's only in proportion to it. See IntegratorTests.cpp.
+enum class IntegratorType {
+  SemiImplicitEuler, // kick(dt), drift(dt). First order. Kept for comparison.
+  VelocityVerlet,    // kick(dt/2), drift(dt), kick(dt/2). Second order. The default.
+};
+
 struct SimulationParams {
   GravityParams gravity;
   CollisionParams collisions;
+  IntegratorType integrator = IntegratorType::VelocityVerlet;
 };
 
 // Owns the bodies and advances them one fixed step at a time.

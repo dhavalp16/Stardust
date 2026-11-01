@@ -1,4 +1,5 @@
 // Tests for the starting scenario.
+#include "sim/Diagnostics.h"
 #include "sim/SolarSystem.h"
 #include <cmath>
 #include <gtest/gtest.h>
