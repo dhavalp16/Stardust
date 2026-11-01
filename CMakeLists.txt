@@ -14,16 +14,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(STARDUST_BUILD_APP "Build the raylib application" ON)
 option(STARDUST_BUILD_TESTS "Build the unit tests" ON)
 option(STARDUST_BUILD_TOOLS "Build the benchmark tool" ON)
+# CI turns this on so that any new warning fails the build.
+option(STARDUST_WARNINGS_AS_ERRORS "Treat compiler warnings in our code as errors" OFF)
 
 # Strict warnings for code we write. Applied per target (never to raylib or
 # third_party/) through stardust_set_warnings().
 function(stardust_set_warnings target)
   if(MSVC)
     target_compile_options(${target} PRIVATE /W4 /permissive-)
+    if(STARDUST_WARNINGS_AS_ERRORS)
+      target_compile_options(${target} PRIVATE /WX)
+    endif()
     # fopen/sscanf are fine here; MSVC's "secure" variants are not portable.
     target_compile_definitions(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    if(STARDUST_WARNINGS_AS_ERRORS)
+      target_compile_options(${target} PRIVATE -Werror)
+    endif()
   endif()
 endfunction()
 

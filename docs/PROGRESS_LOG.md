@@ -51,3 +51,21 @@ order 1, 2, 3, 4. See `docs/GIT_GUIDE.md`.
 - Reproduced it headlessly: the original physics keeps the Moon at steady frame
   rates but loses it after one long frame (see `docs/AUDIT.md`).
 - Wrote `docs/AUDIT.md` and this log.
+- `chore/cmake-build` done and pushed: CMake + presets, folder layout, asset-root
+  lookup, warnings, `.clang-format`, CI. CI (MSVC) built it successfully.
+- The temporary toolchain in the Temp folder was deleted mid-session by something
+  on the machine (probably a cleanup or antivirus process). It was re-downloaded to
+  `C:\Users\Optimus\stardust-build-tools\` (outside the repo; safe to delete when
+  done). `source /c/Users/Optimus/stardust-build-tools/env.sh` in Git Bash puts
+  CMake, Ninja and clang on PATH.
+- `feature/simulation-core` done and pushed: raylib-free `stardust_sim` library,
+  GoogleTest, fixed timestep, velocity Verlet, double precision, softening,
+  conserving merges, computed initial speeds, `stardust_bench`,
+  `docs/MEASUREMENTS.md`, CI runs tests on Windows and Linux.
+- `refactor/app-loop`: scripted screenshots (`--screenshots <folder>`), update/draw
+  split, Sun shader and light, window fits the screen, shared HUD rectangles,
+  camera easing, optional music, HDR loader module (11x faster, identical
+  output), warnings-as-errors in CI. Each visual change was checked by comparing
+  screenshot runs.
+- Next: `docs/learning-guide` (README, learning material, interview prep, git
+  guide, resume claims, final report), then verify every commit builds.

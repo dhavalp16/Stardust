@@ -16,7 +16,7 @@ jobs:
       # No -G: on Windows CMake picks the newest installed Visual Studio, which
       # brings its own MSVC compiler, so no extra setup step is needed.
       - name: Configure
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DSTARDUST_WARNINGS_AS_ERRORS=ON
 
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSTARDUST_BUILD_APP=OFF
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSTARDUST_BUILD_APP=OFF -DSTARDUST_WARNINGS_AS_ERRORS=ON
 
       - name: Build
         run: cmake --build build --parallel
