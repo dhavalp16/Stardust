@@ -1,0 +1,22 @@
+# Continuous integration: GitHub builds the project on every push and pull
+# request, so a broken build is caught before it is merged.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-msvc:
+    name: Windows / MSVC
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No -G: on Windows CMake picks the newest installed Visual Studio, which
+      # brings its own MSVC compiler, so no extra setup step is needed.
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
