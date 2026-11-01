@@ -1,17 +1,11 @@
 // Desktop branch — clean C++ engine, no Android/JNI dependencies
-#define _CRT_SECURE_NO_WARNINGS
 #include "raylib.h"
 #include "raymath.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
-
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
-
 #include "rlgl.h"
 #include "hdr_loader.h"
 
@@ -48,11 +42,9 @@ int main() {
   // Load HDR with custom loader (Raylib's stb_image fails on this 93MB file)
   Image skyImg = LoadHDRManual("assets/HDR_multi_nebulae_1.hdr");
   bool hdrLoaded = (skyImg.data != NULL);
-  int hdrW = skyImg.width, hdrH = skyImg.height;
 
   if (!hdrLoaded) {
     skyImg = GenImageChecked(512, 256, 32, 32, MAGENTA, DARKBLUE);
-    hdrW = 0; hdrH = 0;
   }
 
   // Cap texture size at 8192 for GPU compatibility

@@ -1,0 +1,6 @@
+# Code formatting rules. Run: clang-format -i src/*.cpp src/*.h
+# (Visual Studio picks this file up automatically: Edit > Advanced > Format Document.)
+BasedOnStyle: LLVM
+IndentWidth: 2
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: Inline

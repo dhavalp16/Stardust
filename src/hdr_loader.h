@@ -10,7 +10,7 @@
 #include <cmath>
 
 static Image LoadHDRManual(const char *filename) {
-    Image image = {0};
+    Image image = {};
 
     FILE *f = fopen(filename, "rb");
     if (!f) return image;

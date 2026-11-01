@@ -42,7 +42,7 @@ The app also only worked if the current folder was `Stardust/`.
   exact; this is the setup most C++ teams use.
 - Good: separating our code from third-party code lets us turn on strict warnings
   for our code only.
-- Cost: the first configure downloads raylib (about 20 seconds). You need CMake 3.24+
+- Cost: the first configure downloads raylib (about 20 seconds). You need CMake 3.25+
   (Visual Studio 2022 and later include it).
 - Cost: muscle memory. Opening `Stardust.slnx` no longer works on new branches. The
   old project files are still in history and on the `archive/2026-11-02/*` tags.
