@@ -1,5 +1,6 @@
 // Tests for merging bodies that overlap.
 #include "sim/Collision.h"
+#include "sim/Diagnostics.h"
 #include <cmath>
 #include <gtest/gtest.h>
 
@@ -91,4 +92,25 @@ TEST(Collision, DeadBodiesAreIgnored) {
   bodies[2].isAlive = false;
   EXPECT_TRUE(sim::ResolveCollisions(bodies, {}).empty());
   EXPECT_FLOAT_EQ(bodies[1].mass, 1.0f);
+}
+
+TEST(Collision, MergeIntoTheAnchorAlsoConservesMomentum) {
+  // The original code let the Sun ignore impact momentum, so the system's
+  // total momentum changed on every Sun impact.
+  std::vector<Body> bodies = {MakeBody({0, 0, 0}, {0, 0, 0}, 1000, 2),
+                              MakeBody({1, 0, 0}, {0, 0, 30}, 2, 0.5f)};
+  sim::Vec3 before = sim::TotalMomentum(bodies);
+  sim::ResolveCollisions(bodies, {});
+  sim::Vec3 after = sim::TotalMomentum(bodies);
+  EXPECT_NEAR(after.z, before.z, 1e-9);
+  EXPECT_GT(bodies[0].velocity.z, 0.0); // the Sun is nudged, slightly
+}
+
+TEST(Collision, MergedBodySitsAtTheCentreOfMass) {
+  auto bodies = WithFarAnchor({MakeBody({0, 0, 0}, {}, 3, 1), MakeBody({1, 0, 0}, {}, 1, 1)});
+  sim::Vec3 before = sim::CenterOfMass(bodies);
+  sim::ResolveCollisions(bodies, {});
+  sim::Vec3 after = sim::CenterOfMass(bodies);
+  EXPECT_NEAR(after.x, before.x, 1e-9);
+  EXPECT_NEAR(bodies[1].position.x, 0.25, 1e-9); // (3 * 0 + 1 * 1) / 4
 }

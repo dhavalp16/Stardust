@@ -26,7 +26,8 @@ struct MergeEvent {
 
 // Finds overlapping pairs of live bodies and merges each pair into one body.
 // The survivor is the anchor if involved, otherwise the heavier body (the
-// lower index wins a tie). The victim is flagged dead. Returns every merge.
+// lower index wins a tie). The merged body keeps the pair's total momentum
+// and sits at their centre of mass. The victim is flagged dead. Returns every merge.
 std::vector<MergeEvent> ResolveCollisions(std::vector<Body> &bodies,
                                           const CollisionParams &params);
 

@@ -35,12 +35,13 @@ std::vector<MergeEvent> ResolveCollisions(std::vector<Body> &bodies,
 
       victim.isAlive = false;
 
-      // Perfectly inelastic merge: total momentum (mass * velocity) before equals
-      // total momentum after. The anchor keeps its own velocity.
-      if (survivorIndex != params.anchorIndex) {
-        Vec3 totalMomentum = survivor.velocity * survivor.mass + victim.velocity * victim.mass;
-        survivor.velocity = totalMomentum / (survivor.mass + victim.mass);
-      }
+      // Perfectly inelastic merge. The merged body must carry the same total
+      // momentum (mass * velocity) as the two did, and sit at their centre of
+      // mass, so the system as a whole does not jump. This applies to the Sun
+      // too: it is 2000 units of mass, so a planet barely nudges it.
+      double m1 = survivor.mass, m2 = victim.mass, total = m1 + m2;
+      survivor.velocity = (survivor.velocity * m1 + victim.velocity * m2) / total;
+      survivor.position = (survivor.position * m1 + victim.position * m2) / total;
       survivor.mass += victim.mass;
 
       // Volumes add (4/3 pi r^3 each; the constants cancel), so the new radius
