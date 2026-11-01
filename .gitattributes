@@ -1,0 +1,8 @@
+# Store text files with LF line endings in the repository and let git convert
+# them for your editor. Binary assets must never be converted.
+* text=auto
+
+*.glb binary
+*.hdr binary
+*.png binary
+*.mp3 binary

@@ -437,3 +437,7 @@ session-*.md
 # Scratch/test files
 /Stardust/test.c
 /Stardust/test.cpp
+
+# CMake build folders (see CMakePresets.json)
+/build/
+CMakeUserPresets.json
