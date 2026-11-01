@@ -36,6 +36,7 @@ add_library(stardust_sim STATIC
   src/sim/Collision.cpp
   src/sim/Gravity.cpp
   src/sim/Integrator.cpp
+  src/sim/Simulation.cpp
   src/sim/SolarSystem.cpp
 )
 target_include_directories(stardust_sim PUBLIC src)
@@ -100,8 +101,10 @@ if(STARDUST_BUILD_TESTS)
 
   add_executable(stardust_tests
     tests/CollisionTests.cpp
+    tests/FixedTimestepTests.cpp
     tests/GravityTests.cpp
     tests/IntegratorTests.cpp
+    tests/SimulationTests.cpp
     tests/SolarSystemTests.cpp
     tests/Vec3Tests.cpp
   )

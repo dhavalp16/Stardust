@@ -16,9 +16,8 @@
 #include "HUD.h"
 #include "Input.h"
 #include "PlanetInfo.h"
-#include "sim/Collision.h"
-#include "sim/Gravity.h"
-#include "sim/Integrator.h"
+#include "sim/FixedTimestep.h"
+#include "sim/Simulation.h"
 #include "sim/SolarSystem.h"
 
 int main() {
@@ -74,7 +73,8 @@ int main() {
   // Three index-paired arrays: bodies[i] (physics), planetInfo[i] (name, slider
   // ranges, spin) and planetModels[i] (the 3D model) all describe planet i.
   const std::vector<sim::PlanetSpec> &specs = sim::SolarSystemSpecs();
-  std::vector<sim::Body> bodies = sim::BuildBodies(specs);
+  sim::Simulation simulation(sim::BuildBodies(specs));
+  std::vector<sim::Body> &bodies = simulation.Bodies(); // stays valid across resets
   std::vector<PlanetInfo> planetInfo = MakePlanetInfo(specs);
   std::vector<Model> planetModels;
   for (const PlanetInfo &info : planetInfo) {
@@ -102,9 +102,9 @@ int main() {
   int selected = -1; // index into bodies, or -1 for none
   float cameraSpeed = 20.0f;
   bool isTracking = false;
-  const sim::GravityParams gravity;
-  const sim::CollisionParams collisions;
-  std::vector<sim::Vec3> accelerations;
+  // Physics always advances in steps of exactly 1/600 s (ten per frame at
+  // 60 FPS), however long each frame takes. See src/sim/FixedTimestep.h.
+  sim::FixedTimestep physicsClock(1.0 / 600.0);
 
   float trackingZoom = 1.0f;
   int lastSelectedForZoom = -1;
@@ -122,6 +122,7 @@ int main() {
       isTracking = false;
       currentState = PAUSED;
       bodies = sim::BuildBodies(specs);
+      physicsClock.Reset();
       planetInfo = MakePlanetInfo(specs);
       activeFragments.clear();
     }
@@ -162,13 +163,10 @@ int main() {
 
     // Physics Pipeline
     if (currentState == PLAYING) {
-      const int SUB_STEPS = 10;
-      float subDt = dt / SUB_STEPS;
-
-      for (int step = 0; step < SUB_STEPS; step++) {
-        sim::ComputeAccelerations(bodies, gravity, accelerations);
-        sim::Kick(bodies, accelerations, subDt);
-        for (const sim::MergeEvent &event : sim::ResolveCollisions(bodies, collisions)) {
+      int steps = physicsClock.Advance(dt);
+      for (int step = 0; step < steps; step++) {
+        float h = static_cast<float>(physicsClock.StepSeconds());
+        for (const sim::MergeEvent &event : simulation.Step(h)) {
           SpawnDebris(event, planetInfo[event.victim].tint, activeFragments);
           if (selected == (int)event.victim) {
             selected = -1;
@@ -181,7 +179,6 @@ int main() {
           if (merged.radius > survivor.radiusMax) survivor.radiusMax = merged.radius * 1.5f;
         }
       }
-      sim::Drift(bodies, dt);
     }
 
     float camPos[3] = {camera.position.x, camera.position.y, camera.position.z};
