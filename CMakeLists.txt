@@ -13,6 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(STARDUST_BUILD_APP "Build the raylib application" ON)
 option(STARDUST_BUILD_TESTS "Build the unit tests" ON)
+option(STARDUST_BUILD_TOOLS "Build the benchmark tool" ON)
 
 # Strict warnings for code we write. Applied per target (never to raylib or
 # third_party/) through stardust_set_warnings().
@@ -81,6 +82,15 @@ if(STARDUST_BUILD_APP)
   endif()
   # Lets the app find assets/ and resources/ when run straight from the build folder.
   target_compile_definitions(Stardust PRIVATE STARDUST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+endif()
+
+# ---------------------------------------------------------------------------
+# Benchmark: reproduces the numbers in docs/MEASUREMENTS.md. Use a Release build.
+# ---------------------------------------------------------------------------
+if(STARDUST_BUILD_TOOLS)
+  add_executable(stardust_bench tools/bench/Bench.cpp)
+  target_link_libraries(stardust_bench PRIVATE stardust_sim)
+  stardust_set_warnings(stardust_bench)
 endif()
 
 # ---------------------------------------------------------------------------
