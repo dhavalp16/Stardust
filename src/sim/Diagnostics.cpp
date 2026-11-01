@@ -24,13 +24,15 @@ Vec3 CenterOfMass(const std::vector<Body> &bodies) {
 
 double TotalEnergy(const std::vector<Body> &bodies, const GravityParams &params) {
   // Summed in double precision: the total is a small difference of large terms.
+  // The potential uses the same softening as the forces, or they would disagree.
+  const double eps2 = double{params.softening} * params.softening;
   double kinetic = 0.0, potential = 0.0;
   for (size_t i = 0; i < bodies.size(); i++) {
     if (!bodies[i].isAlive) continue;
     kinetic += 0.5 * bodies[i].mass * LengthSquared(bodies[i].velocity);
     for (size_t j = i + 1; j < bodies.size(); j++) {
       if (!bodies[j].isAlive) continue;
-      double r = Length(bodies[j].position - bodies[i].position);
+      double r = std::sqrt(LengthSquared(bodies[j].position - bodies[i].position) + eps2);
       potential -= params.G * bodies[i].mass * bodies[j].mass / r;
     }
   }

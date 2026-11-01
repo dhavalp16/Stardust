@@ -75,3 +75,33 @@ TEST(Gravity, BodiesOnTopOfEachOtherDoNotProduceInfinity) {
   EXPECT_TRUE(std::isfinite(acc[0].x));
   EXPECT_TRUE(std::isfinite(acc[1].x));
 }
+
+TEST(Gravity, SofteningGivesZeroPullAtZeroDistance) {
+  // With softening the force smoothly falls to zero at the centre instead of
+  // jumping to infinity (or, as the old code did, switching off suddenly).
+  std::vector<Body> bodies = {MakeBody({0, 0, 0}, 100.0f), MakeBody({0, 0, 0}, 1.0f)};
+  std::vector<Vec3> acc;
+  sim::ComputeAccelerations(bodies, sim::GravityParams{}, acc);
+  EXPECT_EQ(acc[1].x, 0.0);
+}
+
+TEST(Gravity, SofteningIsNegligibleAtPlanetaryDistances) {
+  // At r = 1 with softening 0.01 the pull is r^3 / (r^2 + 0.0001)^1.5 of the
+  // pure Newtonian value, about 0.99985.
+  std::vector<Body> bodies = {MakeBody({0, 0, 0}, 1.0f), MakeBody({1, 0, 0}, 1.0f)};
+  std::vector<Vec3> acc;
+  sim::ComputeAccelerations(bodies, sim::GravityParams{}, acc);
+  EXPECT_NEAR(acc[1].x, -0.99985, 1e-5);
+}
+
+TEST(Gravity, SofteningKeepsThePullContinuous) {
+  // The old guard switched gravity off below r = 0.01. Just inside and just
+  // outside that distance the softened pull must be nearly the same (here they
+  // differ by about 1%; the old code jumped from full strength to zero).
+  std::vector<Body> inside = {MakeBody({0, 0, 0}, 1.0f), MakeBody({0.0099, 0, 0}, 1.0f)};
+  std::vector<Body> outside = {MakeBody({0, 0, 0}, 1.0f), MakeBody({0.0101, 0, 0}, 1.0f)};
+  std::vector<Vec3> accIn, accOut;
+  sim::ComputeAccelerations(inside, sim::GravityParams{}, accIn);
+  sim::ComputeAccelerations(outside, sim::GravityParams{}, accOut);
+  EXPECT_NEAR(accIn[1].x / accOut[1].x, 1.0, 0.02);
+}

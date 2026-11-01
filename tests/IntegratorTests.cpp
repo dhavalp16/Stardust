@@ -55,9 +55,17 @@ std::vector<Body> CircularOrbit() {
   return {sun, planet};
 }
 
+// The exact orbit above assumes pure Newtonian gravity, so these tests turn
+// softening off (it would slow the orbit by about 1 part in a million).
+sim::SimulationParams Unsoftened() {
+  sim::SimulationParams params;
+  params.gravity.softening = 0.0f;
+  return params;
+}
+
 // Largest relative change in total energy over `steps` steps of size h.
 double MaxEnergyError(sim::IntegratorType type, float h, int steps) {
-  sim::SimulationParams params;
+  sim::SimulationParams params = Unsoftened();
   params.integrator = type;
   sim::Simulation simulation(CircularOrbit(), params);
   double e0 = sim::TotalEnergy(simulation.Bodies(), params.gravity), worst = 0.0;
@@ -81,7 +89,7 @@ TEST(Integrator, VerletConservesEnergyFarBetterThanEulerAtLargeSteps) {
 }
 
 TEST(Integrator, VerletKeepsTheOrbitRadius) {
-  sim::Simulation simulation(CircularOrbit());
+  sim::Simulation simulation(CircularOrbit(), Unsoftened());
   for (int i = 0; i < 3770; i++) simulation.Step(1.0f / 600.0f); // about one orbit
   double r = sim::Length(simulation.Bodies()[1].position - simulation.Bodies()[0].position);
   EXPECT_NEAR(r, 10.0f, 0.01f);
@@ -93,7 +101,7 @@ namespace {
 // says it should be, after roughly ten orbits with step h.
 double ErrorAfterTenOrbits(double h) {
   const double kTwoPi = 6.283185307179586;
-  sim::Simulation simulation(CircularOrbit());
+  sim::Simulation simulation(CircularOrbit(), Unsoftened());
   int steps = static_cast<int>(std::lround(10 * kTwoPi / h));
   for (int i = 0; i < steps; i++) simulation.Step(h);
   double t = steps * h; // angular speed is 1 radian per second, so the angle is t
