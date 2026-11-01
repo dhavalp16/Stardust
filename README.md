@@ -116,6 +116,7 @@ docs/          audit, measurements, decisions, roadmap, learning material
 
 ## Documentation
 
+- [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md): summary of the November 2026 overhaul
 - [docs/learn/](docs/learn/README.md): learning path through every part of the
   project, with exercises and interview questions
 - [docs/AUDIT.md](docs/AUDIT.md): problems found in the previous version and where
@@ -124,6 +125,8 @@ docs/          audit, measurements, decisions, roadmap, learning material
 - [docs/decisions/](docs/decisions/): why the main design choices were made
 - [docs/ROADMAP.md](docs/ROADMAP.md): what to build next
 - [docs/CHECK_BY_EYE.md](docs/CHECK_BY_EYE.md): manual test checklist
+- [docs/GIT_GUIDE.md](docs/GIT_GUIDE.md): branches, tags and how to merge the overhaul
+- [docs/RESUME_CLAIMS.md](docs/RESUME_CLAIMS.md): what this project supports claiming
 
 ## Known limitations
 
