@@ -21,7 +21,7 @@ void DrawSelectionReticle(int selected, const std::vector<sim::Body> &bodies,
   if (circleRadius < 25.0f) circleRadius = 25.0f;
   if (circleRadius > 300.0f) circleRadius = 300.0f;
 
-  float rot = GetTime() * 80.0f;
+  float rot = static_cast<float>(GetTime()) * 80.0f; // degrees; the ring turns 80 deg/s
   Color hudColor = {0, 220, 255, 210};
 
   DrawRing(p, circleRadius, circleRadius + 2.0f, rot, rot + 45.0f, 16, hudColor);
