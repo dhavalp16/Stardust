@@ -15,6 +15,11 @@ jobs:
 
       # No -G: on Windows CMake picks the newest installed Visual Studio, which
       # brings its own MSVC compiler, so no extra setup step is needed.
+      # Turns MSVC warning and error lines into annotations, which GitHub shows
+      # next to the code in pull requests.
+      - name: Register MSVC problem matcher
+        run: echo "::add-matcher::.github/problem-matchers/msvc.json"
+
       - name: Configure
         run: cmake -S . -B build -DSTARDUST_WARNINGS_AS_ERRORS=ON
 
