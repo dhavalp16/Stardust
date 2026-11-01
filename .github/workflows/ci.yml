@@ -1,5 +1,5 @@
-# Continuous integration: GitHub builds the project on every push and pull
-# request, so a broken build is caught before it is merged.
+# Continuous integration: GitHub builds the project and runs the tests on every
+# push and pull request, so a broken build is caught before it is merged.
 name: CI
 
 on:
@@ -11,7 +11,7 @@ jobs:
     name: Windows / MSVC
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # No -G: on Windows CMake picks the newest installed Visual Studio, which
       # brings its own MSVC compiler, so no extra setup step is needed.
@@ -20,3 +20,24 @@ jobs:
 
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  # The simulation library has no raylib dependency, so its tests build and run
+  # on Linux with GCC without any graphics packages. This proves the physics
+  # core is portable and stays independent of the renderer.
+  linux-sim-tests:
+    name: Linux / GCC (simulation + tests only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DSTARDUST_BUILD_APP=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
