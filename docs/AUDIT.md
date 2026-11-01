@@ -2,7 +2,9 @@
 
 This is the list of problems found in `release/sd-winApp` at commit `4acb9f0`,
 ranked by how much they matter. Each entry says what is wrong, how it was found,
-and where it was fixed (or why it was not). "Fixed in" names the branch; the
+and where it was fixed (or why it was not). File and line references point at the
+original code (`4acb9f0`, kept as tag `archive/2026-11-02/release/sd-winApp`).
+"Fixed in" names the branch; the
 progress log (`docs/PROGRESS_LOG.md`) has the commit-by-commit detail.
 
 Severity scale:
@@ -84,7 +86,7 @@ Severity scale:
 6. **Selection is a raw pointer into a `std::vector`.** `main.cpp:158`,
    `Input.cpp:141`. It works today only because the vector never reallocates and
    reset reuses the same storage; any `push_back` or `erase` would leave it
-   dangling. *Fix:* select by index. Fixed in `refactor/app-loop`.
+   dangling. *Fix:* select by index. Fixed in `feature/simulation-core`.
 
 7. **Momentum is not conserved when something hits the Sun.**
    `Collision.cpp:41-47` skips the momentum update when the Sun survives, which
@@ -136,7 +138,7 @@ Severity scale:
 18. **Initial velocities are typed-in decimals** (`15.811`, `11.952`, ...) instead
     of being computed from `sqrt(G·M/r)`. *Fix:* computed. Fixed in
     `feature/simulation-core`.
-19. **Unused `SUMMARY` state** (`HUD.h:6`). Removed; noted on the roadmap.
+19. **Unused `SUMMARY` state** (`HUD.h:6`). Removed in `refactor/app-loop`.
 20. **`HUD.cpp` uses `std::remove_if` without including `<algorithm>`**; it only
     compiles because another header happens to include it. Fixed in
     `refactor/app-loop`.
