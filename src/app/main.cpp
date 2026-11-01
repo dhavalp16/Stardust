@@ -24,13 +24,17 @@
 int main(int argc, char **argv) {
   ScreenshotScript script = ParseScreenshotScript(argc, argv);
 
-  const int screenWidth = 1920;
-  const int screenHeight = 1080;
-
   ChangeToAssetRoot();
 
-  SetConfigFlags(FLAG_VSYNC_HINT);
-  InitWindow(screenWidth, screenHeight, "Stardust");
+  // Preferred size 1920x1080. On a monitor that is not bigger than that (like a
+  // 1080p laptop screen), a 1920x1080 window plus its title bar does not fit,
+  // so maximise instead: Windows then sizes it to the space above the taskbar.
+  // The window can be resized; the HUD reads the live size every frame.
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
+  InitWindow(1920, 1080, "Stardust");
+  SetWindowMinSize(1024, 600);
+  int monitor = GetCurrentMonitor();
+  if (GetMonitorWidth(monitor) <= 1920 || GetMonitorHeight(monitor) <= 1080) MaximizeWindow();
 
   Shader lightShader = LoadShader("resources/shaders/glsl330/lighting.vs",
                                   "resources/shaders/glsl330/lighting.fs");
@@ -256,8 +260,9 @@ int main(int argc, char **argv) {
       }
     }
 
+    const int screenWidth = GetScreenWidth(), screenHeight = GetScreenHeight();
     DrawSelectionReticle(selected, bodies, planetInfo, camera);
-    DrawDebugOverlay(screenWidth, screenHeight, selected, bodies, planetInfo, currentState,
+    DrawDebugOverlay(screenWidth, selected, bodies, planetInfo, currentState,
                      isTracking);
     DrawHelpBar(screenHeight);
     DrawKeyPressOverlay(screenWidth, screenHeight);

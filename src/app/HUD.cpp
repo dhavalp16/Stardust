@@ -1,6 +1,8 @@
 #include "HUD.h"
 #include "Convert.h"
+#include "HudLayout.h"
 #include "raymath.h"
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include "raygui.h"
@@ -36,14 +38,14 @@ void DrawSelectionReticle(int selected, const std::vector<sim::Body> &bodies,
   DrawText(info[selected].name.c_str(), (int)(p.x + circleRadius + 15), (int)(p.y + 6), 20, WHITE);
 }
 
-void DrawDebugOverlay(int screenWidth, int screenHeight, int selected,
+void DrawDebugOverlay(int screenWidth, int selected,
                       std::vector<sim::Body> &bodies, const std::vector<PlanetInfo> &info,
                       EngineState currentState, bool &isTracking) {
   // Top-left: Selected Planet Info
   if (selected >= 0) {
     sim::Body &body = bodies[selected];
     const PlanetInfo &planet = info[selected];
-    DrawRectangleRounded({10, 10, 310, 220}, 0.1f, 8, Color{10, 10, 10, 200});
+    DrawRectangleRounded(PlanetPanelRect(true), 0.1f, 8, Color{10, 10, 10, 200});
     DrawText(planet.name.c_str(), 20, 20, 22, YELLOW);
     
     char massText[64];
@@ -64,12 +66,12 @@ void DrawDebugOverlay(int screenWidth, int screenHeight, int selected,
       isTracking = !isTracking;
     }
   } else {
-    DrawRectangleRounded({10, 10, 310, 55}, 0.1f, 8, Color{10, 10, 10, 200});
+    DrawRectangleRounded(PlanetPanelRect(false), 0.1f, 8, Color{10, 10, 10, 200});
     DrawText("No planet selected", 20, 25, 22, LIGHTGRAY);
   }
 
   // Top-right: General Engine State
-  DrawRectangleRounded({(float)screenWidth - 260, 10, 250, 110}, 0.1f, 8, Color{10, 10, 10, 200});
+  DrawRectangleRounded(StatsPanelRect(screenWidth), 0.1f, 8, Color{10, 10, 10, 200});
   DrawText(TextFormat("FPS: %d", GetFPS()), screenWidth - 240, 22, 22, GREEN);
   
   int aliveCount = 0;
@@ -158,7 +160,7 @@ void DrawKeyPressOverlay(int screenWidth, int screenHeight) {
 
   float entryH = 30.0f;
   float padX = 14.0f, padY = 10.0f;
-  float totalH = showCount * entryH + padY * 2.0f;
+  float totalH = static_cast<float>(showCount) * entryH + padY * 2.0f;
 
   float maxW = 0.0f;
   for (int i = startIdx; i < (int)entries.size(); i++) {
@@ -178,7 +180,7 @@ void DrawKeyPressOverlay(int screenWidth, int screenHeight) {
     float alpha = (e.held) ? 1.0f : ((e.life < 0.5f) ? (e.life / 0.5f) : 1.0f);
     unsigned char a = (unsigned char)(alpha * 255.0f);
     int idx = i - startIdx;
-    float yPos = boxY + padY + idx * entryH;
+    float yPos = boxY + padY + static_cast<float>(idx) * entryH;
     DrawText(e.key.c_str(), (int)(boxX + padX), (int)(yPos + 4), 18,
              Color{255, 255, 100, a});
   }

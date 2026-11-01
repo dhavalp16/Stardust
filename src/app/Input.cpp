@@ -1,5 +1,6 @@
 #include "Input.h"
 #include "Convert.h"
+#include "HudLayout.h"
 #include "raymath.h"
 #include <cmath>
 
@@ -118,11 +119,8 @@ void ProcessDesktopInput(Camera3D &camera, float &cameraSpeed,
   // Mouse Picking Selection (LMB)
   if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
     Vector2 mpos = GetMousePosition();
-    // Prevent raycasting if clicking on the UI panels
-    bool overLeftUI = (selected >= 0) ? (mpos.x < 320 && mpos.y < 220) : (mpos.x < 320 && mpos.y < 70);
-    bool overRightUI = (mpos.x > GetScreenWidth() - 260 && mpos.y < 120);
-
-    if (!overLeftUI && !overRightUI) {
+    // Clicks on a HUD panel belong to the HUD, not to the planets behind it.
+    if (!IsOverHud(mpos, selected >= 0, GetScreenWidth())) {
       Ray mouseRay = GetMouseRay(mpos, camera);
       float closestDistance = 999999.0f;
       int closestIndex = -1;
