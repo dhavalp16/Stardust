@@ -3,7 +3,7 @@
 
 namespace sim {
 
-std::vector<MergeEvent> Simulation::Step(float dt) {
+std::vector<MergeEvent> Simulation::Step(double dt) {
   if (params_.integrator == IntegratorType::SemiImplicitEuler) {
     // New velocity first, then move with it.
     ComputeAccelerations(bodies_, params_.gravity, accelerations_);
@@ -20,10 +20,10 @@ std::vector<MergeEvent> Simulation::Step(float dt) {
     // steps, so recomputing keeps it simple and always correct. At 10 bodies
     // this costs nothing measurable (see docs/MEASUREMENTS.md).
     ComputeAccelerations(bodies_, params_.gravity, accelerations_);
-    Kick(bodies_, accelerations_, 0.5f * dt);
+    Kick(bodies_, accelerations_, 0.5 * dt);
     Drift(bodies_, dt);
     ComputeAccelerations(bodies_, params_.gravity, accelerations_);
-    Kick(bodies_, accelerations_, 0.5f * dt);
+    Kick(bodies_, accelerations_, 0.5 * dt);
   }
   return ResolveCollisions(bodies_, params_.collisions);
 }

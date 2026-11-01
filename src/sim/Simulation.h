@@ -29,7 +29,7 @@ public:
 
   // Advances every body by `dt` seconds, then merges any that now overlap.
   // Returns the merges that happened during this step.
-  std::vector<MergeEvent> Step(float dt);
+  std::vector<MergeEvent> Step(double dt);
 
   // Direct access, so the HUD sliders can edit mass and radius.
   std::vector<Body> &Bodies() { return bodies_; }

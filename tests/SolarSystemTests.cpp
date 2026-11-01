@@ -29,7 +29,7 @@ TEST(SolarSystem, PlanetsStartAtTheirOrbitRadius) {
   std::vector<Body> bodies = sim::BuildBodies(specs);
   for (size_t i = 1; i < specs.size(); i++) {
     const Body &parent = bodies[static_cast<size_t>(specs[i].parent)];
-    float r = sim::Length(bodies[i].position - parent.position);
+    double r = sim::Length(bodies[i].position - parent.position);
     EXPECT_NEAR(r, specs[i].orbitRadius, 1e-4f) << specs[i].name;
   }
 }

@@ -50,7 +50,7 @@ void DrawDebugOverlay(int screenWidth, int screenHeight, int selected,
     snprintf(massText, sizeof(massText), "Mass: %.2f", body.mass);
     DrawText(massText, 20, 52, 18, WHITE);
 
-    float velMag = sim::Length(body.velocity);
+    double velMag = sim::Length(body.velocity);
     char velText[64];
     snprintf(velText, sizeof(velText), "Velocity: %.2f", velMag);
     DrawText(velText, 20, 76, 18, WHITE);

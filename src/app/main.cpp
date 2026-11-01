@@ -165,8 +165,7 @@ int main() {
     if (currentState == PLAYING) {
       int steps = physicsClock.Advance(dt);
       for (int step = 0; step < steps; step++) {
-        float h = static_cast<float>(physicsClock.StepSeconds());
-        for (const sim::MergeEvent &event : simulation.Step(h)) {
+        for (const sim::MergeEvent &event : simulation.Step(physicsClock.StepSeconds())) {
           SpawnDebris(event, planetInfo[event.victim].tint, activeFragments);
           if (selected == (int)event.victim) {
             selected = -1;

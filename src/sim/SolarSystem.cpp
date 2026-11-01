@@ -34,10 +34,10 @@ std::vector<Body> BuildBodies(const std::vector<PlanetSpec> &specs) {
     if (spec.parent >= 0) {
       // Parents are listed before their children, so bodies[parent] exists.
       const Body &parent = bodies[static_cast<size_t>(spec.parent)];
-      float c = std::cos(spec.phase), s = std::sin(spec.phase);
-      body.position = parent.position + Vec3{spec.orbitRadius * c, 0.0f, spec.orbitRadius * s};
+      double c = std::cos(double{spec.phase}), s = std::sin(double{spec.phase});
+      body.position = parent.position + Vec3{spec.orbitRadius * c, 0.0, spec.orbitRadius * s};
       // (-sin, 0, cos) is at right angles to (cos, 0, sin): a circular-orbit direction.
-      body.velocity = parent.velocity + Vec3{-spec.orbitSpeed * s, 0.0f, spec.orbitSpeed * c};
+      body.velocity = parent.velocity + Vec3{-spec.orbitSpeed * s, 0.0, spec.orbitSpeed * c};
     }
     bodies.push_back(body);
   }

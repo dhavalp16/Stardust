@@ -2,13 +2,13 @@
 
 namespace sim {
 
-void Kick(std::vector<Body> &bodies, const std::vector<Vec3> &accelerations, float dt) {
+void Kick(std::vector<Body> &bodies, const std::vector<Vec3> &accelerations, double dt) {
   for (size_t i = 0; i < bodies.size(); i++) {
     if (bodies[i].isAlive) bodies[i].velocity += accelerations[i] * dt;
   }
 }
 
-void Drift(std::vector<Body> &bodies, float dt) {
+void Drift(std::vector<Body> &bodies, double dt) {
   for (Body &body : bodies) {
     if (body.isAlive) body.position += body.velocity * dt;
   }

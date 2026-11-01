@@ -81,8 +81,8 @@ TEST(Collision, EventRecordsTheVictimAsItWasBeforeTheMerge) {
   bodies[2].position = {1, 0, 0};
   auto events = sim::ResolveCollisions(bodies, {});
   ASSERT_EQ(events.size(), 1u);
-  EXPECT_FLOAT_EQ(events[0].victimPosition.x, 1.0f);
-  EXPECT_FLOAT_EQ(events[0].victimVelocity.x, 3.0f);
+  EXPECT_DOUBLE_EQ(events[0].victimPosition.x, 1.0f);
+  EXPECT_DOUBLE_EQ(events[0].victimVelocity.x, 3.0f);
   EXPECT_FLOAT_EQ(events[0].victimRadius, 0.5f);
 }
 

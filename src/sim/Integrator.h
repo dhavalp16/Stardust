@@ -10,7 +10,7 @@ namespace sim {
 //   Drift: change positions using velocities         x += v * dt
 //
 // Dead bodies are skipped by both.
-void Kick(std::vector<Body> &bodies, const std::vector<Vec3> &accelerations, float dt);
-void Drift(std::vector<Body> &bodies, float dt);
+void Kick(std::vector<Body> &bodies, const std::vector<Vec3> &accelerations, double dt);
+void Drift(std::vector<Body> &bodies, double dt);
 
 } // namespace sim

@@ -13,13 +13,13 @@ Vec3 TotalMomentum(const std::vector<Body> &bodies) {
 
 Vec3 CenterOfMass(const std::vector<Body> &bodies) {
   Vec3 weighted;
-  float totalMass = 0.0f;
+  double totalMass = 0.0;
   for (const Body &body : bodies) {
     if (!body.isAlive) continue;
     weighted += body.position * body.mass;
     totalMass += body.mass;
   }
-  return totalMass > 0.0f ? weighted / totalMass : Vec3{};
+  return totalMass > 0.0 ? weighted / totalMass : Vec3{};
 }
 
 double TotalEnergy(const std::vector<Body> &bodies, const GravityParams &params) {

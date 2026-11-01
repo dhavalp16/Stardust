@@ -13,8 +13,8 @@ TEST(Integrator, KickChangesVelocityByAccelerationTimesDt) {
   std::vector<Body> bodies(1);
   bodies[0].velocity = {1, 0, 0};
   sim::Kick(bodies, {Vec3{0, -10, 0}}, 0.5f);
-  EXPECT_FLOAT_EQ(bodies[0].velocity.x, 1.0f);
-  EXPECT_FLOAT_EQ(bodies[0].velocity.y, -5.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].velocity.x, 1.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].velocity.y, -5.0f);
 }
 
 TEST(Integrator, DriftChangesPositionByVelocityTimesDt) {
@@ -22,9 +22,9 @@ TEST(Integrator, DriftChangesPositionByVelocityTimesDt) {
   bodies[0].position = {1, 2, 3};
   bodies[0].velocity = {2, 0, -4};
   sim::Drift(bodies, 0.25f);
-  EXPECT_FLOAT_EQ(bodies[0].position.x, 1.5f);
-  EXPECT_FLOAT_EQ(bodies[0].position.y, 2.0f);
-  EXPECT_FLOAT_EQ(bodies[0].position.z, 2.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].position.x, 1.5f);
+  EXPECT_DOUBLE_EQ(bodies[0].position.y, 2.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].position.z, 2.0f);
 }
 
 TEST(Integrator, DeadBodiesAreLeftAlone) {
@@ -33,8 +33,8 @@ TEST(Integrator, DeadBodiesAreLeftAlone) {
   bodies[0].velocity = {1, 1, 1};
   sim::Kick(bodies, {Vec3{5, 5, 5}}, 1.0f);
   sim::Drift(bodies, 1.0f);
-  EXPECT_FLOAT_EQ(bodies[0].velocity.x, 1.0f);
-  EXPECT_FLOAT_EQ(bodies[0].position.x, 0.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].velocity.x, 1.0f);
+  EXPECT_DOUBLE_EQ(bodies[0].position.x, 0.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +83,35 @@ TEST(Integrator, VerletConservesEnergyFarBetterThanEulerAtLargeSteps) {
 TEST(Integrator, VerletKeepsTheOrbitRadius) {
   sim::Simulation simulation(CircularOrbit());
   for (int i = 0; i < 3770; i++) simulation.Step(1.0f / 600.0f); // about one orbit
-  float r = sim::Length(simulation.Bodies()[1].position - simulation.Bodies()[0].position);
+  double r = sim::Length(simulation.Bodies()[1].position - simulation.Bodies()[0].position);
   EXPECT_NEAR(r, 10.0f, 0.01f);
+}
+
+namespace {
+
+// Distance between the simulated planet and where the exact circular orbit
+// says it should be, after roughly ten orbits with step h.
+double ErrorAfterTenOrbits(double h) {
+  const double kTwoPi = 6.283185307179586;
+  sim::Simulation simulation(CircularOrbit());
+  int steps = static_cast<int>(std::lround(10 * kTwoPi / h));
+  for (int i = 0; i < steps; i++) simulation.Step(h);
+  double t = steps * h; // angular speed is 1 radian per second, so the angle is t
+  sim::Vec3 exact{10 * std::cos(t), 0, 10 * std::sin(t)};
+  return sim::Length(simulation.Bodies()[1].position - exact);
+}
+
+} // namespace
+
+TEST(Integrator, VerletErrorShrinksWithTheSquareOfTheStep) {
+  // Second order: halve the step and the error drops to about a quarter.
+  double ratio = ErrorAfterTenOrbits(1.0 / 100.0) / ErrorAfterTenOrbits(1.0 / 200.0);
+  EXPECT_GT(ratio, 3.5);
+  EXPECT_LT(ratio, 4.5);
+}
+
+TEST(Integrator, VerletTracksTheExactOrbitAtTheAppStepSize) {
+  // At 600 steps per second, ten orbits (about 63 seconds) end within 0.001
+  // units of the exact answer. With float positions this was about 0.014.
+  EXPECT_LT(ErrorAfterTenOrbits(1.0 / 600.0), 1e-3);
 }

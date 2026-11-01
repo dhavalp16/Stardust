@@ -2,7 +2,9 @@
 #include "raylib.h"
 #include "sim/Vec3.h"
 
-// The simulation has its own vector type (sim::Vec3); raylib has Vector3.
-// They hold the same three floats, so converting is just copying.
-inline Vector3 ToRaylib(sim::Vec3 v) { return Vector3{v.x, v.y, v.z}; }
-inline sim::Vec3 FromRaylib(Vector3 v) { return sim::Vec3{v.x, v.y, v.z}; }
+// The simulation has its own double-precision vector type (sim::Vec3); raylib
+// draws with float Vector3. Converting rounds each component to float, which
+// is more than precise enough for putting pixels on screen.
+inline Vector3 ToRaylib(sim::Vec3 v) {
+  return Vector3{static_cast<float>(v.x), static_cast<float>(v.y), static_cast<float>(v.z)};
+}
