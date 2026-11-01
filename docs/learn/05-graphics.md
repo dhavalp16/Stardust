@@ -65,6 +65,11 @@ Stardust's shaders are in `resources/shaders/glsl330/`.
 
 ## 5.5 Lighting the planets
 
+The two lighting shaders are adapted from raylib's own lighting example (you can
+tell from comments like "NOTE: Add your custom variables here"); the sky shaders
+are minimal pass-throughs. Say so if asked: knowing every line is what matters, not
+having typed them.
+
 `resources/shaders/glsl330/lighting.vs` sends the world-space position and normal
 on. `lighting.fs` computes, per pixel:
 
