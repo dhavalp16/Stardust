@@ -6,7 +6,9 @@
 #include <cmath>
 #include <vector>
 
-#include "hdr_loader.h"
+#include <cstdlib>
+#include <cstring>
+#include <string>
 #include "rlgl.h"
 #include "rlights.h"
 
@@ -17,6 +19,7 @@
 #include "Input.h"
 #include "PlanetInfo.h"
 #include "ScreenshotScript.h"
+#include "io/HdrLoader.h"
 #include "sim/FixedTimestep.h"
 #include "sim/Simulation.h"
 #include "sim/SolarSystem.h"
@@ -50,12 +53,24 @@ int main(int argc, char **argv) {
   camera.fovy = 45.0f;
   camera.projection = CAMERA_PERSPECTIVE;
 
-  // Load HDR with custom loader (Raylib's stb_image fails on this 93MB file)
-  Image skyImg = LoadHDRManual("assets/HDR_multi_nebulae_1.hdr");
-  bool hdrLoaded = (skyImg.data != NULL);
-
-  if (!hdrLoaded) {
-    skyImg = GenImageChecked(512, 256, 32, 32, MAGENTA, DARKBLUE);
+  // The nebula sky: a 93 MB HDR file decoded by our own loader (src/io/HdrLoader).
+  // If it cannot be loaded, a magenta checkerboard makes the problem obvious.
+  Image skyImg = {};
+  {
+    io::HdrImage hdr;
+    std::string error;
+    if (io::LoadHdr("assets/HDR_multi_nebulae_1.hdr", hdr, &error)) {
+      // raylib frees image data with its own allocator, so give it a copy it owns.
+      skyImg.data = RL_MALLOC(hdr.rgba.size());
+      std::memcpy(skyImg.data, hdr.rgba.data(), hdr.rgba.size());
+      skyImg.width = hdr.width;
+      skyImg.height = hdr.height;
+      skyImg.mipmaps = 1;
+      skyImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    } else {
+      TraceLog(LOG_WARNING, "STARDUST: Sky not loaded: %s", error.c_str());
+      skyImg = GenImageChecked(512, 256, 32, 32, MAGENTA, DARKBLUE);
+    }
   }
 
   // Cap texture size at 8192 for GPU compatibility

@@ -117,3 +117,31 @@ times the bodies about nine times as much (3962 → 35038 µs): the pairwise loo
 O(N²). At 10 bodies physics is about 0.02% of a 16.7 ms frame. Somewhere between
 100 and 1000 bodies it stops fitting in a frame, which is where Barnes-Hut (see
 the roadmap) would come in.
+
+## 5. Decoding the HDR sky
+
+`assets/HDR_multi_nebulae_1.hdr`: 93 MB on disk, 10000 x 5000 pixels,
+run-length encoded RGBE. Times are for decoding and tone-mapping to 8-bit RGBA
+only (not the texture upload), Release build (`-O3`), this laptop.
+
+Old versus new was measured with a scratch program that compiled the original
+`hdr_loader.h` (from `archive/2026-11-02/release/sd-winApp`) and the new
+`io::LoadHdr` into one executable, ran each three times on the real file, and
+compared the two outputs byte for byte:
+
+| Run | Original loader | New loader | Outputs identical |
+|---|---|---|---|
+| 1 | 3398 ms | 344 ms | yes |
+| 2 | 3381 ms | 298 ms | yes |
+| 3 | 3344 ms | 304 ms | yes |
+
+Two changes made the difference, measured one after the other:
+
+1. A 64 KB lookup table for the tone curve instead of three `pow()` calls per
+   pixel: 3.4-3.9 s → 1.6-1.7 s.
+2. Reading the whole file into memory with one `fread` and parsing the bytes
+   from the array, instead of asking the C library for one byte at a time:
+   1.6-1.7 s → 0.30-0.34 s.
+
+`stardust_bench` section 4 times the new loader on its own (best of three); it
+printed 277 ms on the run after these changes.

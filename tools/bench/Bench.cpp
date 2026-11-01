@@ -3,6 +3,7 @@
 // Build the Release preset and run build/release/stardust_bench.exe. It needs
 // no window and no assets. Timings depend on the machine; the accuracy and
 // stability numbers do not (they are deterministic).
+#include "io/HdrLoader.h"
 #include "sim/Diagnostics.h"
 #include "sim/FixedTimestep.h"
 #include "sim/Simulation.h"
@@ -13,6 +14,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <string>
 #include <vector>
 
 namespace {
@@ -144,6 +146,29 @@ void StepCost() {
   std::printf("\n");
 }
 
+// --- 4. Loading the sky ------------------------------------------------------
+
+void HdrLoadTime() {
+  std::printf("4. Decoding the 93 MB HDR sky (best of 3)\n\n");
+#ifdef STARDUST_SOURCE_DIR
+  std::string path = std::string(STARDUST_SOURCE_DIR) + "/assets/HDR_multi_nebulae_1.hdr";
+  double best = 1e9;
+  io::HdrImage image;
+  for (int run = 0; run < 3; run++) {
+    auto start = std::chrono::steady_clock::now();
+    if (!io::LoadHdr(path, image)) {
+      std::printf("   could not load %s\n\n", path.c_str());
+      return;
+    }
+    auto end = std::chrono::steady_clock::now();
+    best = std::min(best, std::chrono::duration<double, std::milli>(end - start).count());
+  }
+  std::printf("   %dx%d pixels in %.0f ms\n\n", image.width, image.height, best);
+#else
+  std::printf("   skipped (STARDUST_SOURCE_DIR not defined)\n\n");
+#endif
+}
+
 } // namespace
 
 int main() {
@@ -151,5 +176,6 @@ int main() {
   IntegratorAccuracy();
   StalledFrame();
   StepCost();
+  HdrLoadTime();
   return 0;
 }

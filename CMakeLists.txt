@@ -44,6 +44,12 @@ add_library(stardust_sim STATIC
 target_include_directories(stardust_sim PUBLIC src)
 stardust_set_warnings(stardust_sim)
 
+# Asset loading that needs no window either (the HDR sky decoder), so it can be
+# unit-tested and benchmarked like the simulation.
+add_library(stardust_io STATIC src/io/HdrLoader.cpp)
+target_include_directories(stardust_io PUBLIC src)
+stardust_set_warnings(stardust_io)
+
 # ---------------------------------------------------------------------------
 # The application
 # ---------------------------------------------------------------------------
@@ -73,7 +79,7 @@ if(STARDUST_BUILD_APP)
   target_include_directories(Stardust PRIVATE src/app)
   # SYSTEM tells the compiler these are not our headers, so it does not warn about them.
   target_include_directories(Stardust SYSTEM PRIVATE third_party)
-  target_link_libraries(Stardust PRIVATE stardust_sim raylib)
+  target_link_libraries(Stardust PRIVATE stardust_sim stardust_io raylib)
   stardust_set_warnings(Stardust)
   # ThirdPartyImpl.cpp compiles other people's code; silence its warnings.
   if(MSVC)
@@ -90,7 +96,8 @@ endif()
 # ---------------------------------------------------------------------------
 if(STARDUST_BUILD_TOOLS)
   add_executable(stardust_bench tools/bench/Bench.cpp)
-  target_link_libraries(stardust_bench PRIVATE stardust_sim)
+  target_link_libraries(stardust_bench PRIVATE stardust_sim stardust_io)
+  target_compile_definitions(stardust_bench PRIVATE STARDUST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   stardust_set_warnings(stardust_bench)
 endif()
 
@@ -115,12 +122,13 @@ if(STARDUST_BUILD_TESTS)
     tests/CollisionTests.cpp
     tests/FixedTimestepTests.cpp
     tests/GravityTests.cpp
+    tests/HdrLoaderTests.cpp
     tests/IntegratorTests.cpp
     tests/SimulationTests.cpp
     tests/SolarSystemTests.cpp
     tests/Vec3Tests.cpp
   )
-  target_link_libraries(stardust_tests PRIVATE stardust_sim GTest::gtest_main)
+  target_link_libraries(stardust_tests PRIVATE stardust_sim stardust_io GTest::gtest_main)
   stardust_set_warnings(stardust_tests)
 
   include(GoogleTest)
